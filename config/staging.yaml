@@ -1,0 +1,156 @@
+# NovaSkyn Web Server Configuration - Staging Environment
+# Managed by FluxCD - Mounted at /etc/novaskyn/config.yaml via ConfigMap
+
+environment: staging
+
+# Security Configuration
+security:
+  # Content Security Policy Configuration
+  csp:
+    # BFF pattern: No external API domains needed (same-origin /graphql)
+    api_domains: []
+
+    # WebSocket domains for subscriptions (BFF: same-origin)
+    ws_domains: []
+
+    # Additional allowed domains for fetch/XHR requests
+    additional_connect_src:
+      - https://viacep.com.br        # Brazilian CEP (postal code) API
+      - https://api.stripe.com       # Stripe API
+
+    # Script sources (Stripe.js, Cloudflare Insights)
+    script_sources:
+      - https://js.stripe.com
+      - https://static.cloudflareinsights.com
+
+    # Font sources (Google Fonts CDN)
+    font_sources:
+      - https://fonts.gstatic.com
+
+    # Stylesheet sources (Google Fonts)
+    style_sources:
+      - https://fonts.googleapis.com
+
+    # Frame sources for iframe embedding (Stripe payment forms)
+    frame_sources:
+      - https://js.stripe.com
+      - https://hooks.stripe.com
+
+    # Image sources (defaults to: 'self' data: https: blob:)
+    # Uncomment to override with more restrictive policy:
+    # img_sources:
+    #   - "'self'"
+    #   - data:
+    #   - https://trusted-cdn.example.com
+
+  # CORS (Cross-Origin Resource Sharing) Configuration
+  cors:
+    allowed_origins:
+      - https://staging.novaskyn.com
+      - https://www.staging.novaskyn.com
+    allow_credentials: true
+    max_age_secs: 3600              # 1 hour preflight cache
+    additional_allowed_headers: []   # Add custom headers if needed
+    additional_exposed_headers: []   # Add custom exposed headers if needed
+
+  # HSTS (HTTP Strict Transport Security) Configuration
+  hsts:
+    max_age: 31536000              # 1 year in seconds
+    include_subdomains: true
+    preload: true
+
+  # Additional Security Headers
+  headers:
+    x_frame_options: "DENY"
+    referrer_policy: "strict-origin-when-cross-origin"
+    permissions_policy: "geolocation=(), microphone=(), camera=(), payment=()"
+
+# API Configuration (BFF pattern - proxied internally)
+api:
+  graphql_url: /graphql                 # Same-origin BFF endpoint
+  ws_url: /graphql                      # Same-origin WebSocket endpoint
+
+# Backend-for-Frontend (BFF) Configuration
+# ENABLED - Web server proxies all GraphQL traffic to Hive Router
+bff:
+  mode: proxy                           # Options: disabled, proxy, cache, aggregate
+  hive_router_url: http://hive-router.novaskyn-staging.svc.cluster.local:4000/graphql
+  timeout_secs: 30
+  cache:
+    enabled: false
+    redis_host: localhost
+    redis_port: 6379
+    default_ttl_secs: 60
+    strategies: []
+    # Example strategies (uncomment to use):
+    # - query_pattern: "product.*"
+    #   ttl_secs: 300               # Cache products for 5 minutes
+    # - query_pattern: "user.cart"
+    #   ttl_secs: 10                # Cache cart for 10 seconds
+  rate_limit:
+    enabled: true
+    requests_per_second: 1000
+    burst_size: 2000
+
+  # Federation Mode Configuration
+  # When enabled, BFF acts as GraphQL federation router instead of proxying to Hive Router
+  # This solves WebSocket subscription forwarding issues with external routers
+  federation:
+    enabled: true                       # Enable for development/testing
+    supergraph_url: file:///etc/supergraph.graphql
+    poll_interval_secs: 0               # Load once at startup (no polling)
+    hmac_secret: ""                     # Set via HMAC_SECRET env var in production
+    subgraph_timeout_secs: 30
+    websocket_enabled: true             # Enable WebSocket transport for subscriptions
+    websocket_path: /graphql/ws         # Path on subgraphs for WebSocket connections
+
+# Server Configuration
+server:
+  static_dir: /app/static  # Static files directory (React build output + env.js)
+  http_port: 80
+  health_port: 8080
+  service_name: novaskyn-web
+  service_version: 1.0.0
+  bind_address: 0.0.0.0
+  request_timeout_secs: 30
+  keepalive_timeout_secs: 75
+
+# Compression Configuration
+compression:
+  enable_brotli: true
+  enable_gzip: true
+  min_compress_size: 1024          # Minimum size in bytes to compress
+
+# Cache Control Configuration
+cache:
+  enable_cache_headers: true
+  static_max_age: 31536000         # 1 year for static assets
+  html_max_age: 3600               # 1 hour for HTML files
+
+# Health Check Configuration
+health:
+  disk_warn_threshold: 10.0        # Warning at 10% free disk space
+  disk_critical_threshold: 5.0     # Critical at 5% free disk space
+  memory_warn_threshold: 10.0      # Warning at 10% free memory
+  memory_critical_threshold: 5.0   # Critical at 5% free memory
+
+# Metrics Configuration (StatsD/Vector)
+metrics:
+  enabled: true
+  vector_host: 127.0.0.1
+  vector_port: 8125
+  prefix: novaskyn_web              # Metric name prefix
+
+# Logging Configuration
+logging:
+  format: json                      # Options: json, pretty
+  level: info                       # Options: trace, debug, info, warn, error
+  include_location: true            # Include file:line in logs
+  include_thread_ids: false         # Include thread IDs in logs
+
+# Feature Flags
+features:
+  enable_bug_reports: true          # Enable bug report endpoint (staging only)
+  enable_metrics: true              # Enable metrics emission
+  enable_detailed_health_checks: true  # Enable detailed health checks
+  enable_bff: true                  # Enable Backend-for-Frontend proxy (ENABLED for BFF pattern)

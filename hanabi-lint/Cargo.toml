@@ -1,0 +1,38 @@
+[package]
+name = "hanabi-lint"
+version = "0.1.0"
+edition = "2021"
+description = "Perfection checker for Hanabi BFF server - AST-based code quality analysis"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "hanabi-lint"
+path = "src/main.rs"
+
+[dependencies]
+# AST parsing for accurate unwrap/panic detection
+syn = { version = "2.0", features = ["full", "visit", "parsing", "extra-traits"] }
+proc-macro2 = { version = "1.0", features = ["span-locations"] }
+
+# CLI and output
+clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Cargo integration
+cargo_metadata = "0.18"
+
+# Error handling (dogfooding our own standards)
+thiserror = "2"
+
+# File system traversal
+walkdir = "2.5"
+glob = "0.3"
+
+# Regex for backlog parsing
+regex = "1.10"
+
+[dev-dependencies]
+tempfile = "3.14"

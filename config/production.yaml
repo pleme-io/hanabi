@@ -1,0 +1,131 @@
+# NovaSkyn Web Server Configuration - Production Environment
+# Managed by FluxCD - Mounted at /etc/novaskyn/config.yaml via ConfigMap
+
+environment: production
+
+# Security Configuration
+security:
+  # Content Security Policy Configuration
+  csp:
+    # BFF pattern: No external API domains needed (same-origin /graphql)
+    api_domains: []
+
+    # WebSocket domains for subscriptions (BFF: same-origin)
+    ws_domains: []
+
+    # Additional allowed domains for fetch/XHR requests
+    additional_connect_src:
+      - https://viacep.com.br        # Brazilian CEP (postal code) API
+      - https://api.stripe.com       # Stripe API
+
+    # Script sources (Stripe.js, Cloudflare Insights)
+    script_sources:
+      - https://js.stripe.com
+      - https://static.cloudflareinsights.com
+
+    # Font sources (Google Fonts CDN)
+    font_sources:
+      - https://fonts.gstatic.com
+
+    # Stylesheet sources (Google Fonts)
+    style_sources:
+      - https://fonts.googleapis.com
+
+    # Frame sources for iframe embedding (Stripe payment forms)
+    frame_sources:
+      - https://js.stripe.com
+      - https://hooks.stripe.com
+
+    # Image sources (defaults to: 'self' data: https: blob:)
+    # Uncomment to override with more restrictive policy:
+    # img_sources:
+    #   - "'self'"
+    #   - data:
+    #   - https://trusted-cdn.example.com
+
+  # CORS (Cross-Origin Resource Sharing) Configuration
+  cors:
+    allowed_origins:
+      - https://novaskyn.com
+      - https://www.novaskyn.com
+    allow_credentials: true
+    max_age_secs: 3600              # 1 hour preflight cache
+    additional_allowed_headers: []   # Add custom headers if needed
+    additional_exposed_headers: []   # Add custom exposed headers if needed
+
+  # HSTS (HTTP Strict Transport Security) Configuration
+  hsts:
+    max_age: 31536000              # 1 year in seconds
+    include_subdomains: true
+    preload: true
+
+  # Additional Security Headers
+  headers:
+    x_frame_options: "DENY"
+    referrer_policy: "strict-origin-when-cross-origin"
+    permissions_policy: "geolocation=(), microphone=(), camera=(), payment=()"
+
+# API Configuration (BFF pattern - proxied internally)
+api:
+  graphql_url: /graphql                 # Same-origin BFF endpoint
+  ws_url: /graphql                      # Same-origin WebSocket endpoint
+
+# Backend-for-Frontend (BFF) Configuration
+# ENABLED - Web server proxies all GraphQL traffic to Hive Router
+bff:
+  mode: proxy                           # Options: disabled, proxy, cache, aggregate
+  hive_router_url: http://hive-router.novaskyn-production.svc.cluster.local:4000/graphql
+
+  # Federation Mode Configuration
+  # When enabled, BFF acts as GraphQL federation router instead of proxying to Hive Router
+  # DISABLED in production - continue using Hive Router for federation
+  federation:
+    enabled: false                      # Disabled - proxy to Hive Router
+
+# Server Configuration
+server:
+  static_dir: /app/static  # Static files directory (React build output + env.js)
+  http_port: 80
+  health_port: 8080
+  service_name: novaskyn-web
+  service_version: 1.0.0
+  bind_address: 0.0.0.0
+  request_timeout_secs: 30
+  keepalive_timeout_secs: 75
+
+# Compression Configuration
+compression:
+  enable_brotli: true
+  enable_gzip: true
+  min_compress_size: 1024          # Minimum size in bytes to compress
+
+# Cache Control Configuration
+cache:
+  enable_cache_headers: true
+  static_max_age: 31536000         # 1 year for static assets
+  html_max_age: 3600               # 1 hour for HTML files
+
+# Health Check Configuration
+health:
+  disk_warn_threshold: 10.0        # Warning at 10% free disk space
+  disk_critical_threshold: 5.0     # Critical at 5% free disk space
+  memory_warn_threshold: 10.0      # Warning at 10% free memory
+  memory_critical_threshold: 5.0   # Critical at 5% free memory
+
+# Metrics Configuration (StatsD/Vector)
+metrics:
+  enabled: true
+  vector_host: 127.0.0.1
+  vector_port: 8125
+  prefix: novaskyn_web              # Metric name prefix
+
+# Logging Configuration
+logging:
+  format: json                      # Options: json, pretty
+  level: info                       # Options: trace, debug, info, warn, error
+  include_location: true            # Include file:line in logs
+  include_thread_ids: false         # Include thread IDs in logs
+
+# Feature Flags
+feature_flags:
+  enable_bff: true                  # Enable Backend-for-Frontend proxy (ENABLED for BFF pattern)
