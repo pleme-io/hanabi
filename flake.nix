@@ -23,6 +23,7 @@
     ...
   }: let
     systems = ["aarch64-darwin" "x86_64-linux" "aarch64-linux"];
+    linuxSystems = ["x86_64-linux" "aarch64-linux"];
     forAllSystems = f:
       nixpkgs.lib.genAttrs systems (system:
         f {
@@ -32,36 +33,21 @@
           };
           inherit system;
         });
+    forLinuxSystems = f:
+      nixpkgs.lib.genAttrs linuxSystems (system:
+        f {
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          inherit system;
+        });
   in {
-    packages = forAllSystems ({
+    # Binary and Docker image packages are Linux-only (Docker images target Linux)
+    packages = forLinuxSystems ({
       pkgs,
       system,
     }: let
-      crate2nixPkg = crate2nix.packages.${system}.default;
-
-      # Rust overlay for cross-compilation
-      rustOverlay = final: prev: let
-        fenixPkgs = fenix.packages.${system};
-        toolchain = fenixPkgs.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          sha256 = nixpkgs.lib.fakeSha256;
-        };
-      in {
-        rustc = toolchain;
-        cargo = toolchain;
-      };
-
-      # Target Linux for Docker images when building on Mac
-      targetPkgs =
-        if pkgs.stdenv.isDarwin
-        then
-          import nixpkgs.outPath {
-            system = "x86_64-linux";
-            overlays = [rustOverlay];
-          }
-        else pkgs;
-
-      architecture = "amd64";
       muslTarget = "x86_64-unknown-linux-musl";
       targetEnvNameUpper = "X86_64_UNKNOWN_LINUX_MUSL";
 
@@ -72,12 +58,12 @@
         if hasCargoNix
         then
           import cargoNix {
-            pkgs = targetPkgs;
+            inherit pkgs;
             defaultCrateOverrides =
-              targetPkgs.defaultCrateOverrides
+              pkgs.defaultCrateOverrides
               // {
                 hanabi = oldAttrs: {
-                  nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ (with targetPkgs; [cmake perl git]);
+                  nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ (with pkgs; [cmake perl git]);
                   CARGO_BUILD_TARGET = muslTarget;
                   "CARGO_TARGET_${targetEnvNameUpper}_RUSTFLAGS" = "-C target-feature=+crt-static -C link-arg=-s";
                 };
@@ -98,16 +84,16 @@
       hanabiImage =
         if serviceBinary != null
         then
-          targetPkgs.dockerTools.buildLayeredImage {
+          pkgs.dockerTools.buildLayeredImage {
             name = "ghcr.io/pleme-io/hanabi";
             tag = "latest";
-            contents = [serviceBinary targetPkgs.cacert];
+            contents = [serviceBinary pkgs.cacert];
             config = {
               Entrypoint = ["${serviceBinary}/bin/hanabi"];
               Env = [
                 "RUST_LOG=info,hanabi=debug"
                 "LOG_FORMAT=json"
-                "SSL_CERT_FILE=${targetPkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
               ];
               ExposedPorts = {
                 "3000/tcp" = {};
