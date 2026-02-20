@@ -266,7 +266,7 @@ impl Default for InvalidationConfig {
         Self {
             enabled: false,
             redis_url: "redis://localhost:6379".to_string(),
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
             channel_buffer_size: 1000,
             pod_id: "unknown".to_string(),
             mutation_patterns: vec![
@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn test_invalidation_event_entity() {
-        let event = InvalidationEvent::entity("User", "123", "novaskyn", "pod-1");
+        let event = InvalidationEvent::entity("User", "123", "myapp", "pod-1");
 
         match event {
             InvalidationEvent::Entity {
@@ -673,7 +673,7 @@ mod tests {
             } => {
                 assert_eq!(entity_type, "User");
                 assert_eq!(entity_id, "123");
-                assert_eq!(product, "novaskyn");
+                assert_eq!(product, "myapp");
                 assert_eq!(source_pod, "pod-1");
             }
             _ => panic!("Expected Entity variant"),
@@ -682,7 +682,7 @@ mod tests {
 
     #[test]
     fn test_invalidation_event_pattern() {
-        let event = InvalidationEvent::pattern("Product:*", "novaskyn", "pod-1");
+        let event = InvalidationEvent::pattern("Product:*", "myapp", "pod-1");
 
         match event {
             InvalidationEvent::Pattern { pattern, .. } => {
@@ -694,21 +694,21 @@ mod tests {
 
     #[test]
     fn test_cache_keys_entity() {
-        let event = InvalidationEvent::entity("User", "123", "novaskyn", "pod-1");
+        let event = InvalidationEvent::entity("User", "123", "myapp", "pod-1");
         let keys = event.cache_keys();
         assert_eq!(keys, vec!["User:123"]);
     }
 
     #[test]
     fn test_cache_keys_pattern() {
-        let event = InvalidationEvent::pattern("Product:*", "novaskyn", "pod-1");
+        let event = InvalidationEvent::pattern("Product:*", "myapp", "pod-1");
         let keys = event.cache_keys();
         assert_eq!(keys, vec!["Product:"]);
     }
 
     #[test]
     fn test_invalidation_event_tag() {
-        let event = InvalidationEvent::tag("cart", "novaskyn", "pod-1");
+        let event = InvalidationEvent::tag("cart", "myapp", "pod-1");
 
         match event {
             InvalidationEvent::Tag {
@@ -718,7 +718,7 @@ mod tests {
                 ..
             } => {
                 assert_eq!(tag, "cart");
-                assert_eq!(product, "novaskyn");
+                assert_eq!(product, "myapp");
                 assert_eq!(source_pod, "pod-1");
             }
             _ => panic!("Expected Tag variant"),
@@ -727,28 +727,28 @@ mod tests {
 
     #[test]
     fn test_cache_keys_tag() {
-        let event = InvalidationEvent::tag("cart", "novaskyn", "pod-1");
+        let event = InvalidationEvent::tag("cart", "myapp", "pod-1");
         let keys = event.cache_keys();
         assert_eq!(keys, vec!["tag:cart"]);
     }
 
     #[test]
     fn test_cache_keys_flush() {
-        let event = InvalidationEvent::flush(Some("novaskyn"), "deployment", "pod-1");
+        let event = InvalidationEvent::flush(Some("myapp"), "deployment", "pod-1");
         let keys = event.cache_keys();
         assert!(keys.is_empty());
     }
 
     #[test]
     fn test_event_accessors() {
-        let entity = InvalidationEvent::entity("User", "123", "novaskyn", "pod-1");
-        assert_eq!(entity.product(), Some("novaskyn"));
+        let entity = InvalidationEvent::entity("User", "123", "myapp", "pod-1");
+        assert_eq!(entity.product(), Some("myapp"));
         assert_eq!(entity.source_pod(), "pod-1");
         assert!(!entity.is_pattern());
         assert!(!entity.is_flush());
 
-        let pattern = InvalidationEvent::pattern("Product:*", "novaskyn", "pod-2");
-        assert_eq!(pattern.product(), Some("novaskyn"));
+        let pattern = InvalidationEvent::pattern("Product:*", "myapp", "pod-2");
+        assert_eq!(pattern.product(), Some("myapp"));
         assert_eq!(pattern.source_pod(), "pod-2");
         assert!(pattern.is_pattern());
         assert!(!pattern.is_flush());
@@ -762,7 +762,7 @@ mod tests {
 
     #[test]
     fn test_event_serialization_tag() {
-        let event = InvalidationEvent::tag("session", "novaskyn", "pod-1");
+        let event = InvalidationEvent::tag("session", "myapp", "pod-1");
 
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"type\":\"tag\""));
@@ -866,7 +866,7 @@ mod tests {
 
     #[test]
     fn test_event_serialization() {
-        let event = InvalidationEvent::entity("User", "123", "novaskyn", "pod-1");
+        let event = InvalidationEvent::entity("User", "123", "myapp", "pod-1");
 
         let json = serde_json::to_string(&event).unwrap();
         let parsed: InvalidationEvent = serde_json::from_str(&json).unwrap();
@@ -876,7 +876,7 @@ mod tests {
 
     #[test]
     fn test_event_serialization_pattern() {
-        let event = InvalidationEvent::pattern("Product:*", "novaskyn", "pod-1");
+        let event = InvalidationEvent::pattern("Product:*", "myapp", "pod-1");
 
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"type\":\"pattern\""));
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn test_event_serialization_flush() {
-        let event = InvalidationEvent::flush(Some("novaskyn"), "deployment", "pod-1");
+        let event = InvalidationEvent::flush(Some("myapp"), "deployment", "pod-1");
 
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains("\"type\":\"flush\""));

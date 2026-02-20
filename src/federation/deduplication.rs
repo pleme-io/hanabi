@@ -437,14 +437,14 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             Some(serde_json::json!({"limit": 10, "offset": 0})),
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         let key2 = DeduplicationKey::new(
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             Some(serde_json::json!({"offset": 0, "limit": 10})), // Different order
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         assert_eq!(key1.hash(), key2.hash());
@@ -456,7 +456,7 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             None,
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         let key2 = DeduplicationKey::new(
@@ -477,7 +477,7 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             None,
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         // First request should become leader
@@ -521,7 +521,7 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             None,
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         // Should return None when disabled

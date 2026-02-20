@@ -2,7 +2,9 @@
 name = "hanabi"
 version = "1.0.0"
 edition = "2021"
-description = "Hanabi (花火) - Shared BFF web server for Nexus products"
+license = "MIT"
+repository = "https://github.com/pleme-io/hanabi"
+description = "Hanabi (花火) - GraphQL Federation BFF platform service"
 
 [lib]
 name = "hanabi"
@@ -37,7 +39,7 @@ redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 async-nats = "0.38"
 
 # Startup notifications (Discord, Grafana, health probes)
-pleme-notifications = { path = "../../libraries/rust/crates/pleme-notifications" }
+pleme-notifications = { git = "https://github.com/pleme-io/pleme-notifications" }
 
 # UUID for session IDs
 uuid = { version = "1.11", features = ["v4", "serde"] }

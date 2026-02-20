@@ -46,7 +46,7 @@ export default function () {
     {
       headers: {
         "Content-Type": "application/json",
-        "X-Product": "novaskyn",
+        "X-Product": "example",
       },
     }
   );
@@ -63,7 +63,7 @@ export default function () {
   });
 
   // Test 3: Multi-product support
-  const products = ["novaskyn", "lilitu", "thai"];
+  const products = ["product-a", "product-b", "product-c"];
   for (const product of products) {
     const res = http.post(
       `${TARGET_URL}/graphql`,

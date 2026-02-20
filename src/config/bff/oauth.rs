@@ -34,7 +34,7 @@ pub struct BffOAuthConfig {
     pub instagram: Option<MetaSocialOAuthConfig>,
 
     /// Frontend URL to redirect to after OAuth completion
-    /// e.g., "https://staging.novaskyn.com" or "http://localhost:5173"
+    /// e.g., "https://staging.example.com" or "http://localhost:5173"
     pub frontend_url: String,
 
     /// Frontend path to redirect to after successful OAuth
@@ -77,7 +77,7 @@ pub struct BffOAuthProviderConfig {
     pub client_secret: String,
 
     /// OAuth redirect URI (must match Google Console config)
-    /// e.g., "https://staging.novaskyn.com/api/auth/google/callback"
+    /// e.g., "https://staging.example.com/api/auth/google/callback"
     pub redirect_uri: String,
 
     /// OAuth scopes to request
@@ -102,7 +102,7 @@ impl Default for BffOAuthProviderConfig {
 /// Meta Social OAuth configuration for Instagram Business Account linking
 ///
 /// # Social Integration OAuth (NOT Login OAuth)
-/// This is for linking Instagram Business/Creator accounts to NovaSkyn provider profiles.
+/// This is for linking Instagram Business/Creator accounts to Hanabi provider profiles.
 /// Different from login OAuth because:
 /// - Requires different scopes (instagram_basic, pages_show_list, etc.)
 /// - Stores integration data in social_integrations table (not user sessions)
@@ -127,7 +127,7 @@ pub struct MetaSocialOAuthConfig {
     pub app_secret: String,
 
     /// OAuth redirect URI for Instagram linking
-    /// e.g., "https://staging.novaskyn.com/api/social/instagram/callback"
+    /// e.g., "https://staging.example.com/api/social/instagram/callback"
     pub redirect_uri: String,
 
     /// OAuth scopes for Instagram Business Account access

@@ -4,17 +4,7 @@ k6-based load testing suite for the Hanabi BFF server.
 
 ## Prerequisites
 
-k6 is installed via the Nix devshell at the root of the Nexus repository:
-
-```bash
-# From repository root
-nix develop  # or: direnv allow
-
-# Verify k6 is available
-k6 version
-```
-
-Alternatively, install k6 manually:
+Install k6:
 ```bash
 # macOS
 brew install k6
@@ -39,13 +29,13 @@ sudo apt-get update && sudo apt-get install k6
 
 ```bash
 # Start Hanabi locally
-cargo run --manifest-path pkgs/platform/hanabi/Cargo.toml
+cargo run
 
 # Run smoke test (in another terminal)
-k6 run pkgs/platform/hanabi/load-tests/smoke-test.js
+k6 run load-tests/smoke-test.js
 
 # Run load test
-k6 run pkgs/platform/hanabi/load-tests/graphql-load-test.js
+k6 run load-tests/graphql-load-test.js
 ```
 
 ## Configuration
@@ -60,7 +50,7 @@ k6 run pkgs/platform/hanabi/load-tests/graphql-load-test.js
 
 ```bash
 # Test against staging
-k6 run --env TARGET_URL=https://staging.novaskyn.com \
+k6 run --env TARGET_URL=https://staging.example.com \
   load-tests/graphql-load-test.js
 
 # Quick test with 10 users for 30s

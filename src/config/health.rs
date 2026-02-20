@@ -54,7 +54,7 @@ pub struct ServiceHealthConfig {
     pub category: String,
 
     /// Base URL for the service (without health path)
-    /// e.g., "http://auth.novaskyn-staging.svc.cluster.local:8081"
+    /// e.g., "http://auth.your-product-staging.svc.cluster.local:8081"
     pub base_url: String,
 
     /// Health endpoint path (default: "/health/ready")

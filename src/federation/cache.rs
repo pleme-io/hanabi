@@ -526,14 +526,14 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             Some(serde_json::json!({"limit": 10, "offset": 0})),
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         let key2 = CacheKey::new(
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             Some(serde_json::json!({"offset": 0, "limit": 10})), // Different order
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         assert_eq!(key1.hash(), key2.hash());
@@ -545,7 +545,7 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             None,
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         let key2 = CacheKey::new(
@@ -604,7 +604,7 @@ mod tests {
             Some("getProducts".to_string()),
             "query { products { id } }".to_string(),
             None,
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         let response = serde_json::json!({
@@ -699,13 +699,13 @@ mod tests {
                     Some("op".to_string()),
                     "query".to_string(),
                     Some(vars1),
-                    "novaskyn".to_string(),
+                    "myapp".to_string(),
                 );
                 let cache_key2 = CacheKey::new(
                     Some("op".to_string()),
                     "query".to_string(),
                     Some(vars2),
-                    "novaskyn".to_string(),
+                    "myapp".to_string(),
                 );
 
                 prop_assert_eq!(cache_key1.hash(), cache_key2.hash());
@@ -733,9 +733,9 @@ mod tests {
                 let query2 = tokens.join("  ");  // Double spaces
                 let query3 = tokens.join("   "); // Triple spaces
 
-                let key1 = CacheKey::new(None, query1, None, "novaskyn".to_string());
-                let key2 = CacheKey::new(None, query2, None, "novaskyn".to_string());
-                let key3 = CacheKey::new(None, query3, None, "novaskyn".to_string());
+                let key1 = CacheKey::new(None, query1, None, "myapp".to_string());
+                let key2 = CacheKey::new(None, query2, None, "myapp".to_string());
+                let key3 = CacheKey::new(None, query3, None, "myapp".to_string());
 
                 prop_assert_eq!(key1.hash(), key2.hash());
                 prop_assert_eq!(key2.hash(), key3.hash());

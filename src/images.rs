@@ -157,7 +157,7 @@ impl Default for ImageCache {
 /// Path parameters for image proxy
 #[derive(Debug, serde::Deserialize)]
 pub struct ImagePath {
-    /// Product scope (e.g., "novaskyn", "myapp")
+    /// Product scope (e.g., "myapp", "storefront")
     pub product: String,
     /// User/Ad ID
     pub user_id: String,

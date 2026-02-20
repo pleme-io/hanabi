@@ -142,7 +142,7 @@ const QUERIES = {
 };
 
 // Request headers
-function getHeaders(product = "novaskyn") {
+function getHeaders(product = "example") {
   return {
     "Content-Type": "application/json",
     "X-Product": product,
@@ -153,7 +153,7 @@ function getHeaders(product = "novaskyn") {
 }
 
 // Make GraphQL request
-function graphqlRequest(queryConfig, product = "novaskyn") {
+function graphqlRequest(queryConfig, product = "example") {
   const payload = JSON.stringify({
     query: queryConfig.query,
     variables: queryConfig.variables || {},
@@ -235,7 +235,7 @@ export default function () {
 
   // Multi-product isolation test
   group("Multi-Product Isolation", function () {
-    const products = ["novaskyn", "lilitu", "thai"];
+    const products = ["product-a", "product-b", "product-c"];
     const product = products[Math.floor(Math.random() * products.length)];
     const res = graphqlRequest(QUERIES.introspection, product);
     check(res, {

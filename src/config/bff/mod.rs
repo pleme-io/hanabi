@@ -33,7 +33,7 @@ pub struct BffConfig {
     pub mode: String,
 
     /// Product identifier for multi-tenant isolation
-    /// This BFF serves a specific product (e.g., "novaskyn", "myapp")
+    /// This BFF serves a specific product (e.g., "myapp", "storefront")
     /// Sets the x-product header on all requests to Hive Router
     pub product: String,
 

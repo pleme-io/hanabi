@@ -1,27 +1,35 @@
-# NovaSkyn Web Server Configuration
+# Hanabi Configuration
 
-This directory contains environment-specific YAML configurations managed by FluxCD.
+This directory contains YAML configuration for the Hanabi BFF server.
 
 ## Files
 
-- `staging.yaml` - Configuration for staging environment
-- `production.yaml` - Configuration for production environment
+- `example.yaml` - Example configuration with all options documented
 
-## FluxCD Integration
+## Getting Started
+
+Copy the example and customize for your environment:
+
+```bash
+cp config/example.yaml config/my-env.yaml
+# Edit config/my-env.yaml with your values
+```
+
+## Kubernetes / FluxCD Integration
 
 ### ConfigMap Creation
 
-FluxCD should create a ConfigMap from the appropriate YAML file:
+Create a ConfigMap from your YAML file:
 
 ```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: novaskyn-web-config
-  namespace: novaskyn-staging  # or novaskyn-production
+  name: hanabi-config
+  namespace: your-product-staging
 data:
   config.yaml: |
-    # Content from staging.yaml or production.yaml
+    # Content from your customized config YAML
 ```
 
 ### Deployment Configuration
@@ -32,21 +40,21 @@ Mount the ConfigMap in the Deployment:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: novaskyn-web
+  name: hanabi
 spec:
   template:
     spec:
       containers:
-      - name: web-server
-        image: novaskyn-web:latest
+      - name: hanabi
+        image: ghcr.io/pleme-io/hanabi:latest
         volumeMounts:
         - name: config
-          mountPath: /etc/novaskyn
+          mountPath: /etc/hanabi
           readOnly: true
       volumes:
       - name: config
         configMap:
-          name: novaskyn-web-config
+          name: hanabi-config
 ```
 
 ## Configuration Structure
@@ -93,16 +101,6 @@ spec:
 4. **Frame Denial**: Always use `x_frame_options: "DENY"` unless iframes needed
 5. **Minimal Permissions**: Deny all browser features not explicitly needed
 
-## Environment Differences
-
-### Staging vs Production
-
-| Setting | Staging | Production |
-|---------|---------|------------|
-| API Domain | `api.staging.novaskyn.com` | `api.novaskyn.com` |
-| Frontend Origin | `staging.novaskyn.com` | `novaskyn.com` |
-| Error Reporting | Verbose | Minimal |
-
 ## Troubleshooting
 
 ### CSP Violations
@@ -112,13 +110,13 @@ If you see CSP errors in browser console:
 1. Check browser DevTools Console for exact violation
 2. Identify the blocked resource domain
 3. Add to appropriate CSP array in config YAML
-4. Update FluxCD ConfigMap
+4. Update ConfigMap
 5. Restart pods to apply changes
 
 ### Common Issues
 
 **"Refused to connect to API"**
-- Verify `api_domains` includes correct staging/production API URL
+- Verify `api_domains` includes correct API URL
 - Check `connect-src` CSP directive in browser DevTools
 
 **"Refused to load fonts"**
@@ -131,7 +129,7 @@ If you see CSP errors in browser console:
 
 ## Deployment Workflow
 
-1. **Update Config**: Edit `staging.yaml` or `production.yaml`
+1. **Update Config**: Edit your environment YAML
 2. **Commit Changes**: Push to Git (FluxCD watches this repo)
 3. **FluxCD Sync**: FluxCD automatically updates ConfigMap
 4. **Restart Pods**: Either automatic or manual pod restart

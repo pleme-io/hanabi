@@ -153,7 +153,7 @@ impl Default for BroadcasterConfig {
     fn default() -> Self {
         Self {
             redis_url: "redis://localhost:6379".to_string(),
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
             channel_buffer_size: 1000,
             enabled: false,
             pod_id: "unknown".to_string(),
@@ -441,8 +441,8 @@ mod tests {
 
     #[test]
     fn test_channel_format() {
-        let channel = format!("{}:{}", REDIS_CHANNEL_PREFIX, "novaskyn");
-        assert_eq!(channel, "bff:subscriptions:novaskyn");
+        let channel = format!("{}:{}", REDIS_CHANNEL_PREFIX, "myapp");
+        assert_eq!(channel, "bff:subscriptions:myapp");
     }
 
     #[test]

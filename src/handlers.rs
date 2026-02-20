@@ -187,7 +187,7 @@ pub async fn bug_reports(
 /// ```json
 /// {
 ///   "status": "healthy",
-///   "service": "novaskyn-web",
+///   "service": "my-service",
 ///   "version": {
 ///     "app": "1.0.0",           // From package.json
 ///     "gitSha": "abc123def",    // Git commit hash
@@ -198,7 +198,7 @@ pub async fn bug_reports(
 /// ```
 ///
 /// # Use Case
-/// - Integration tests polling `https://staging.novaskyn.com/health`
+/// - Integration tests polling `https://staging.example.com/health`
 /// - Verifying the correct deployment is running before testing
 /// - External monitoring services
 /// - Simple uptime checks

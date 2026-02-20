@@ -14,7 +14,7 @@ pub struct LoggingConfig {
     pub level: String,
 
     /// Per-module log levels (overrides global level)
-    /// Example: { "novaskyn_web_server::bff": "debug", "tower_http": "warn" }
+    /// Example: { "hanabi::bff": "debug", "tower_http": "warn" }
     pub module_levels: HashMap<String, String>,
 
     /// Include file/line numbers in logs (default: true for json)

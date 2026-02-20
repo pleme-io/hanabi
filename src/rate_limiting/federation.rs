@@ -545,7 +545,7 @@ mod tests {
             operation_name: None,
             operation_type: OperationType::Query,
             subgraph: None,
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
         };
 
         let result = limiter.check(&ctx);
@@ -569,7 +569,7 @@ mod tests {
             operation_name: Some("getUsers".to_string()),
             operation_type: OperationType::Query,
             subgraph: None,
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
         };
 
         // First request should be allowed
@@ -597,7 +597,7 @@ mod tests {
             operation_name: None,
             operation_type: OperationType::Query,
             subgraph: None,
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
         };
 
         for _ in 0..100 {
@@ -618,7 +618,7 @@ mod tests {
             operation_name: None,
             operation_type: OperationType::Query,
             subgraph: None,
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
         };
         assert_eq!(limiter.get_key(&ctx), "user:user-123");
 
@@ -629,7 +629,7 @@ mod tests {
             operation_name: None,
             operation_type: OperationType::Query,
             subgraph: None,
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
         };
         assert_eq!(limiter.get_key(&ctx), "ip:192.168.1.1");
     }

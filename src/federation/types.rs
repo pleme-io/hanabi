@@ -22,7 +22,7 @@ pub struct ExecutionContext {
     /// JSON-encoded relationships from JWT 'relationships' claim
     pub user_relationships: Option<String>,
 
-    /// Product identifier (e.g., "novaskyn", "myapp")
+    /// Product identifier (e.g., "myapp", "storefront")
     pub product: String,
 
     /// Cookie header value (for forwarding to auth subgraph)

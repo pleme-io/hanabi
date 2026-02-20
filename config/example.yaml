@@ -1,7 +1,11 @@
-# NovaSkyn Web Server Configuration - Production Environment
-# Managed by FluxCD - Mounted at /etc/novaskyn/config.yaml via ConfigMap
+# Hanabi BFF Configuration - Example
+#
+# Copy this file and customize for your environment:
+#   cp config/example.yaml config/my-env.yaml
+#
+# Mount via ConfigMap in Kubernetes or pass via HANABI_CONFIG env var.
 
-environment: production
+environment: staging  # staging | production
 
 # Security Configuration
 security:
@@ -46,8 +50,11 @@ security:
   # CORS (Cross-Origin Resource Sharing) Configuration
   cors:
     allowed_origins:
-      - https://novaskyn.com
-      - https://www.novaskyn.com
+      - https://staging.example.com      # ← Replace with your staging domain
+      - https://www.staging.example.com   # ← Replace with your staging domain
+      # Production example:
+      # - https://example.com
+      # - https://www.example.com
     allow_credentials: true
     max_age_secs: 3600              # 1 hour preflight cache
     additional_allowed_headers: []   # Add custom headers if needed
@@ -74,20 +81,42 @@ api:
 # ENABLED - Web server proxies all GraphQL traffic to Hive Router
 bff:
   mode: proxy                           # Options: disabled, proxy, cache, aggregate
-  hive_router_url: http://hive-router.novaskyn-production.svc.cluster.local:4000/graphql
+  hive_router_url: http://hive-router.your-product-staging.svc.cluster.local:4000/graphql  # ← Replace
+  timeout_secs: 30
+  cache:
+    enabled: false
+    redis_host: localhost
+    redis_port: 6379
+    default_ttl_secs: 60
+    strategies: []
+    # Example strategies (uncomment to use):
+    # - query_pattern: "product.*"
+    #   ttl_secs: 300               # Cache products for 5 minutes
+    # - query_pattern: "user.cart"
+    #   ttl_secs: 10                # Cache cart for 10 seconds
+  rate_limit:
+    enabled: true
+    requests_per_second: 1000
+    burst_size: 2000
 
   # Federation Mode Configuration
   # When enabled, BFF acts as GraphQL federation router instead of proxying to Hive Router
-  # DISABLED in production - continue using Hive Router for federation
+  # This solves WebSocket subscription forwarding issues with external routers
   federation:
-    enabled: false                      # Disabled - proxy to Hive Router
+    enabled: true                       # Enable for development/testing
+    supergraph_url: file:///etc/supergraph.graphql
+    poll_interval_secs: 0               # Load once at startup (no polling)
+    hmac_secret: ""                     # Set via HMAC_SECRET env var in production
+    subgraph_timeout_secs: 30
+    websocket_enabled: true             # Enable WebSocket transport for subscriptions
+    websocket_path: /graphql/ws         # Path on subgraphs for WebSocket connections
 
 # Server Configuration
 server:
   static_dir: /app/static  # Static files directory (React build output + env.js)
   http_port: 80
   health_port: 8080
-  service_name: novaskyn-web
+  service_name: your-product-web         # ← Replace with your service name
   service_version: 1.0.0
   bind_address: 0.0.0.0
   request_timeout_secs: 30
@@ -117,7 +146,7 @@ metrics:
   enabled: true
   vector_host: 127.0.0.1
   vector_port: 8125
-  prefix: novaskyn_web              # Metric name prefix
+  prefix: your_product_web              # ← Replace with your metric prefix
 
 # Logging Configuration
 logging:
@@ -127,5 +156,8 @@ logging:
   include_thread_ids: false         # Include thread IDs in logs
 
 # Feature Flags
-feature_flags:
-  enable_bff: true                  # Enable Backend-for-Frontend proxy (ENABLED for BFF pattern)
+features:
+  enable_bug_reports: true          # Enable bug report endpoint (staging only)
+  enable_metrics: true              # Enable metrics emission
+  enable_detailed_health_checks: true  # Enable detailed health checks
+  enable_bff: true                  # Enable Backend-for-Frontend proxy

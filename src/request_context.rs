@@ -117,7 +117,7 @@ struct RequestContextInner {
     /// Trace ID for distributed tracing (W3C Trace Context)
     trace_id: Option<String>,
 
-    /// Product scope (e.g., "novaskyn", "myapp")
+    /// Product scope (e.g., "myapp", "storefront")
     product: String,
 }
 

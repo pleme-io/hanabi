@@ -72,7 +72,7 @@ pub struct SessionInfo {
     /// User ID from auth service
     pub user_id: String,
 
-    /// Product context (e.g., "novaskyn", "myapp")
+    /// Product context (e.g., "myapp", "myapp")
     pub product: String,
 
     /// When the session was created (Unix timestamp)
@@ -130,14 +130,14 @@ mod tests {
         let session = SessionInfo {
             id: "test-session-id".to_string(),
             user_id: "user-123".to_string(),
-            product: "novaskyn".to_string(),
+            product: "myapp".to_string(),
             created_at: 1700000000,
             expires_at: 1700086400,
         };
 
         assert_eq!(session.id, "test-session-id");
         assert_eq!(session.user_id, "user-123");
-        assert_eq!(session.product, "novaskyn");
+        assert_eq!(session.product, "myapp");
     }
 
     #[test]

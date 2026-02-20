@@ -2232,6 +2232,7 @@ dependencies = [
 [[package]]
 name = "pleme-notifications"
 version = "0.1.0"
+source = "git+https://github.com/pleme-io/pleme-notifications#dee9533ef03155f68ab609b41e28b29c0f71c53e"
 dependencies = [
  "chrono",
  "reqwest",

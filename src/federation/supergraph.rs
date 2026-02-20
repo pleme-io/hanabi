@@ -612,9 +612,9 @@ schema
 }
 
 enum join__Graph {
-  CHAT @join__graph(name: "chat", url: "http://chat.novaskyn-staging:8080/graphql")
-  JOB_SCHEDULER @join__graph(name: "job-scheduler", url: "http://job-scheduler.novaskyn-staging:8080/graphql")
-  AUTH @join__graph(name: "auth", url: "http://auth.novaskyn-staging:8080/graphql")
+  CHAT @join__graph(name: "chat", url: "http://chat.myapp-staging:8080/graphql")
+  JOB_SCHEDULER @join__graph(name: "job-scheduler", url: "http://job-scheduler.myapp-staging:8080/graphql")
+  AUTH @join__graph(name: "auth", url: "http://auth.myapp-staging:8080/graphql")
 }
 
 type Subscription {
@@ -633,8 +633,8 @@ type Subscription {
 
         let chat = supergraph.get_subgraph("chat").unwrap();
         assert_eq!(chat.name, "chat");
-        assert_eq!(chat.url, "http://chat.novaskyn-staging:8080/graphql");
-        assert_eq!(chat.ws_url, "ws://chat.novaskyn-staging:8080/graphql");
+        assert_eq!(chat.url, "http://chat.myapp-staging:8080/graphql");
+        assert_eq!(chat.ws_url, "ws://chat.myapp-staging:8080/graphql");
 
         let job_scheduler = supergraph.get_subgraph("job-scheduler").unwrap();
         assert_eq!(job_scheduler.name, "job-scheduler");

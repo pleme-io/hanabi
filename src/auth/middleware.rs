@@ -212,7 +212,7 @@ pub async fn session_auth_middleware(
     inject_user_headers(&mut request, &session);
 
     // Inject x-product header for product isolation (required by pleme-rbac)
-    // This identifies which product this BFF serves (e.g., "novaskyn", "myapp")
+    // This identifies which product this BFF serves (e.g., "myapp", "storefront")
     if let Ok(value) = state.config.bff.product.parse() {
         request.headers_mut().insert("x-product", value);
     }

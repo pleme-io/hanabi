@@ -1299,7 +1299,7 @@ mod tests {
                 }
             }
         "#;
-        let variables = json!({ "productId": "novaskyn", "limit": 20 });
+        let variables = json!({ "productId": "myapp", "limit": 20 });
 
         let plan = planner
             .plan(query, Some("GetMyServices"), &variables)
@@ -1830,7 +1830,7 @@ mod tests {
         use hive_router_query_planner::utils::parsing::parse_schema;
         use std::path::Path;
 
-        // Path to actual NovaSkyn supergraph (499KB, 21 subgraphs)
+        // Path to test supergraph (499KB, 21 subgraphs)
         let supergraph_path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()

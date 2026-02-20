@@ -1985,7 +1985,7 @@ mod tests {
             "query { user }".to_string(),
             None,
             None,
-            "novaskyn".to_string(),
+            "myapp".to_string(),
         );
 
         ctx.set_data("custom_key", "custom_value");
