@@ -138,6 +138,12 @@ pub struct HivePlannerConfig {
     /// - 0 means auto-detect: min(num_cpus, 8) capped for memory efficiency
     /// - Any positive value uses that exact number of threads
     pub num_planning_threads: usize,
+
+    /// Default port for subgraph endpoints when URL is not in the supergraph schema
+    pub subgraph_default_port: u16,
+
+    /// Default path for subgraph endpoints when URL is not in the supergraph schema
+    pub subgraph_default_path: String,
 }
 
 impl Default for HivePlannerConfig {
@@ -148,6 +154,8 @@ impl Default for HivePlannerConfig {
             cache_ttl: Duration::from_secs(3600), // 1 hour
             channel_buffer_size: 1000,
             num_planning_threads: 0, // Auto-detect based on CPU cores
+            subgraph_default_port: 8080,
+            subgraph_default_path: "/graphql".to_string(),
         }
     }
 }
@@ -682,7 +690,14 @@ impl HivePlanner {
                     .subgraph_endpoints
                     .get(&fetch.service_name)
                     .cloned()
-                    .unwrap_or_else(|| format!("http://{}:8080/graphql", fetch.service_name));
+                    .unwrap_or_else(|| {
+                        format!(
+                            "http://{}:{}{}",
+                            fetch.service_name,
+                            self.config.subgraph_default_port,
+                            self.config.subgraph_default_path
+                        )
+                    });
 
                 // Extract requires as field names if present
                 let requires: Vec<String> = fetch

@@ -837,6 +837,8 @@ impl AppState {
             dedup_enabled: !performance_mode && config.bff.federation.deduplication.enabled,
             hmac_secret,
             use_hive_planner: config.bff.federation.use_hive_planner,
+            subgraph_default_port: config.bff.federation.subgraph_default_port,
+            subgraph_default_path: config.bff.federation.subgraph_default_path.clone(),
         };
 
         // Log which features are enabled

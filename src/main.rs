@@ -11,7 +11,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 use std::sync::Arc;
 
-use tracing::info;
+use tracing::{info, warn};
 
 // Module declarations
 mod auth;
@@ -76,6 +76,18 @@ async fn async_main(config: Arc<AppConfig>) -> Result<(), Box<dyn std::error::Er
 
     info!("=== {} (Pure Rust Stack) ===", config.server.service_name);
     info!("Version: {}", env!("CARGO_PKG_VERSION"));
+
+    // Download webapp(s) from S3 sources if configured (before preflight checks)
+    for source in &config.server.webapp_sources {
+        if let Err(e) = download_webapp_from_s3(source).await {
+            tracing::error!(
+                "Failed to download webapp '{}' from S3: {}",
+                source.display_name(),
+                e
+            );
+            std::process::exit(1);
+        }
+    }
 
     if let Err(e) = PreflightChecks::run_all(&config) {
         tracing::error!("Preflight checks failed: {}", e);
@@ -163,4 +175,90 @@ async fn async_main(config: Arc<AppConfig>) -> Result<(), Box<dyn std::error::Er
     }
 
     sb.build().await.run().await
+}
+
+/// Download a webapp archive from S3 and extract it to the source's target directory.
+///
+/// Uses the `rust-s3` crate to fetch a tar.gz archive from the configured
+/// S3 endpoint and extracts it to `target_dir`. This allows decoupling webapp
+/// deployments from the BFF container image.
+async fn download_webapp_from_s3(
+    source: &config::WebappS3Source,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use flate2::read::GzDecoder;
+    use s3::creds::Credentials;
+    use s3::{Bucket, Region};
+    use std::io::Cursor;
+    use tar::Archive;
+
+    info!(
+        "Downloading webapp '{}' from S3: {}/{}/{}",
+        source.display_name(),
+        source.endpoint,
+        source.bucket,
+        source.key
+    );
+
+    let region = Region::Custom {
+        region: source.region.clone(),
+        endpoint: source.endpoint.clone(),
+    };
+
+    let access_key = source.get_access_key().ok_or_else(|| {
+        format!(
+            "S3 access key not configured for webapp source '{}' (set access_key or access_key_env)",
+            source.display_name()
+        )
+    })?;
+    let secret_key = source.get_secret_key().ok_or_else(|| {
+        format!(
+            "S3 secret key not configured for webapp source '{}' (set secret_key or secret_key_env)",
+            source.display_name()
+        )
+    })?;
+
+    let credentials = Credentials::new(Some(&access_key), Some(&secret_key), None, None, None)?;
+
+    let bucket = Bucket::new(&source.bucket, region, credentials)?;
+    let bucket = if source.path_style {
+        bucket.with_path_style()
+    } else {
+        bucket
+    };
+
+    let response = bucket.get_object(&source.key).await?;
+
+    if response.status_code() != 200 {
+        return Err(format!(
+            "S3 returned status {} for {}/{}",
+            response.status_code(),
+            source.bucket,
+            source.key
+        )
+        .into());
+    }
+
+    let bytes = response.bytes();
+    info!(
+        "Downloaded {} bytes for '{}', extracting to {}",
+        bytes.len(),
+        source.display_name(),
+        source.target_dir
+    );
+
+    // Create target_dir if it doesn't exist
+    std::fs::create_dir_all(&source.target_dir)?;
+
+    // Extract tar.gz archive
+    let cursor = Cursor::new(bytes);
+    let gz = GzDecoder::new(cursor);
+    let mut archive = Archive::new(gz);
+    archive.unpack(&source.target_dir)?;
+
+    info!(
+        "Webapp '{}' extracted to {}",
+        source.display_name(),
+        source.target_dir
+    );
+    Ok(())
 }

@@ -31,7 +31,7 @@ cargo build
 cargo run
 
 # Run with custom config
-HANABI_CONFIG=config/example.yaml cargo run
+CONFIG_PATH=config/example.yaml cargo run
 
 # Run with jemalloc (recommended for production)
 cargo build --release --features jemalloc
@@ -50,7 +50,7 @@ Key environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `HANABI_CONFIG` | Path to config YAML | `config.yaml` |
+| `CONFIG_PATH` | Path to config YAML | `/etc/hanabi/config.yaml` |
 | `RUST_LOG` | Log level filter | `info,hanabi=debug` |
 | `LOG_FORMAT` | Log format (`json` or `pretty`) | `json` |
 | `BFF_PRODUCT` | Product identifier | `default` |

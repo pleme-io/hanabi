@@ -68,7 +68,7 @@ use super::batch::{BatchConfig, SubgraphBatcherFactory};
 use super::deduplication::{
     DeduplicationConfig, DeduplicationKey, DeduplicationResult, RequestDeduplicator,
 };
-use super::hive_planner::HivePlanner;
+use super::hive_planner::{HivePlanner, HivePlannerConfig};
 use super::plan_executor::{ExecutionContext, ExecutorConfig, GraphQLError, PlanExecutor};
 use super::plugins::{
     AllowListConfig,
@@ -157,6 +157,12 @@ pub struct FederationExecutorConfig {
     /// The Hive planner is production-grade with 189 Federation v2 compliance tests
     /// and handles all edge cases (entity resolution, @requires, @provides, etc.)
     pub use_hive_planner: bool,
+
+    /// Default port for subgraph endpoints when URL is not in the supergraph schema
+    pub subgraph_default_port: u16,
+
+    /// Default path for subgraph endpoints when URL is not in the supergraph schema
+    pub subgraph_default_path: String,
 }
 
 impl Default for FederationExecutorConfig {
@@ -172,6 +178,8 @@ impl Default for FederationExecutorConfig {
             dedup_enabled: true, // Can be disabled in performance mode
             hmac_secret: None,
             use_hive_planner: true, // Use Hive planner by default (more complete)
+            subgraph_default_port: 8080,
+            subgraph_default_path: "/graphql".to_string(),
         }
     }
 }
@@ -353,7 +361,10 @@ impl FederationExecutor {
 
         // Initialize Hive planner if enabled
         let hive_planner = if config.use_hive_planner {
-            match HivePlanner::new(&supergraph.schema) {
+            let mut planner_config = HivePlannerConfig::default();
+            planner_config.subgraph_default_port = config.subgraph_default_port;
+            planner_config.subgraph_default_path = config.subgraph_default_path.clone();
+            match HivePlanner::with_config(&supergraph.schema, planner_config) {
                 Ok(planner) => {
                     info!("Federation Hive planner: enabled (production-grade Federation v2)");
                     Some(planner)

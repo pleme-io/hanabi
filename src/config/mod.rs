@@ -46,7 +46,7 @@ pub use network::NetworkConfig;
 pub use preflight::PreflightConfig;
 pub use s3::S3Config;
 pub use security::SecurityConfig;
-pub use server::ServerConfig;
+pub use server::{ServerConfig, WebappS3Source};
 pub use telemetry::TelemetryConfig;
 
 /// Application Configuration (loaded from YAML file mounted by FluxCD)
@@ -240,9 +240,15 @@ impl AppConfig {
         }
 
         // Validate static directory exists
-        if !Path::new(&self.server.static_dir).exists() {
+        // Skip check if any webapp_source targets static_dir (it will be created at startup)
+        let s3_populates_static_dir = self
+            .server
+            .webapp_sources
+            .iter()
+            .any(|s| s.target_dir == self.server.static_dir);
+        if !s3_populates_static_dir && !Path::new(&self.server.static_dir).exists() {
             return Err(format!(
-                "Static directory does not exist: {}",
+                "Static directory does not exist: {} (use server.webapp_sources to download from S3, or mount a volume)",
                 self.server.static_dir
             ));
         }
@@ -347,16 +353,11 @@ impl AppConfig {
         let connect_src = connect_src_parts.join(" ");
 
         // Build script-src from configured sources
-        // Note: https://unpkg.com is required for React CDN (bundler uses external React)
-        let script_src_parts: Vec<&str> = vec![
-            "'self'",
-            "'unsafe-inline'",
-            "'unsafe-eval'",
-            "https://unpkg.com", // React/ReactDOM CDN
-        ]
-        .into_iter()
-        .chain(self.security.csp.script_sources.iter().map(|s| s.as_str()))
-        .collect();
+        // Additional CDN origins (e.g., unpkg.com) should be added via security.csp.script_sources
+        let script_src_parts: Vec<&str> = vec!["'self'", "'unsafe-inline'", "'unsafe-eval'"]
+            .into_iter()
+            .chain(self.security.csp.script_sources.iter().map(|s| s.as_str()))
+            .collect();
         let script_src = script_src_parts.join(" ");
 
         // Build style-src from configured sources

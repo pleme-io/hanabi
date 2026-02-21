@@ -1,5 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+fn default_subgraph_port() -> u16 {
+    8080
+}
+
+fn default_subgraph_path() -> String {
+    "/graphql".to_string()
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct BffFederationConfig {
@@ -108,6 +116,14 @@ pub struct BffFederationConfig {
 
     /// Cache invalidation configuration (event-driven invalidation via Redis pub/sub)
     pub cache_invalidation: FederationCacheInvalidationConfig,
+
+    /// Default port for subgraphs when URL is not in the supergraph schema
+    #[serde(default = "default_subgraph_port")]
+    pub subgraph_default_port: u16,
+
+    /// Default path for subgraphs when URL is not in the supergraph schema
+    #[serde(default = "default_subgraph_path")]
+    pub subgraph_default_path: String,
 }
 
 impl Default for BffFederationConfig {
@@ -139,6 +155,8 @@ impl Default for BffFederationConfig {
             enable_load_shedding: false, // Disabled by default - just process all requests
             use_hive_planner: true, // Hive planner enabled by default
             cache_invalidation: FederationCacheInvalidationConfig::default(),
+            subgraph_default_port: default_subgraph_port(),
+            subgraph_default_path: default_subgraph_path(),
         }
     }
 }

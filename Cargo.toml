@@ -26,9 +26,13 @@ tower-http = { version = "0.5", features = ["fs", "compression-gzip", "compressi
 # HTTP client for BFF proxy (rustls with ring crypto - auto-installs provider)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 
-# S3 client for image proxy (authenticated access to RustFS/MinIO)
+# S3 client for image proxy + webapp source (authenticated access to RustFS/MinIO)
 # No TLS needed - RustFS is internal HTTP endpoint (http://rustfs-svc...)
 rust-s3 = { version = "0.37", default-features = false, features = ["with-tokio", "fail-on-err"] }
+
+# Archive extraction for S3 webapp source (download tar.gz at startup)
+flate2 = "1.0"
+tar = "0.4"
 
 # Redis for BFF session storage
 # Uses ConnectionManager for multiplexed async connections with auto-reconnect
