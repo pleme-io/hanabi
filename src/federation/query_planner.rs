@@ -1886,7 +1886,7 @@ mod tests {
         use hive_router_query_planner::graph::PlannerOverrideContext;
         use hive_router_query_planner::planner::Planner;
         use hive_router_query_planner::utils::cancellation::CancellationToken;
-        use hive_router_query_planner::utils::parsing::parse_schema;
+        use hive_router_query_planner::utils::parsing::{parse_schema, safe_parse_operation};
         use std::path::Path;
 
         // Load production supergraph
@@ -1918,11 +1918,9 @@ mod tests {
             }
         "#;
 
-        // Parse the query
-        let parsed_query: graphql_parser::query::Document<'static, String> =
-            graphql_parser::parse_query(query_str)
-                .expect("Failed to parse query")
-                .into_static();
+        // Parse the query using hive-router's parser (graphql_tools) for type compatibility
+        let parsed_query = safe_parse_operation(query_str)
+            .expect("Failed to parse query");
 
         // Normalize the operation
         let start = std::time::Instant::now();

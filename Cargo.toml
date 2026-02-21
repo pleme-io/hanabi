@@ -94,8 +94,6 @@ apollo-parser = "0.8"
 # MIT licensed, 189 compliance tests, handles all federation edge cases
 hive-router-query-planner = "2.1"
 
-# GraphQL query parser (same version as hive-router-query-planner)
-graphql-parser = "0.4.1"
 
 # Logging and tracing
 tracing = "0.1"

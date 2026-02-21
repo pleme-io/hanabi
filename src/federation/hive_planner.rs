@@ -50,12 +50,11 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use crossbeam_utils::CachePadded;
-use graphql_parser::parse_query;
 use hive_router_query_planner::{
     ast::normalization::normalize_operation,
     graph::PlannerOverrideContext,
     planner::{Planner, PlannerError},
-    utils::{cancellation::CancellationToken, parsing::parse_schema},
+    utils::{cancellation::CancellationToken, parsing::{parse_schema, safe_parse_operation}},
 };
 use moka::future::Cache;
 use once_cell::sync::Lazy;
@@ -446,10 +445,9 @@ impl HivePlanner {
         operation_name: Option<&str>,
         timeout: Duration,
     ) -> Result<Arc<HiveQueryPlan>, HivePlannerError> {
-        // Parse the query
-        let parsed_query: graphql_parser::query::Document<'static, String> = parse_query(query)
-            .map_err(|e| HivePlannerError::QueryParseError(e.to_string()))?
-            .into_static();
+        // Parse the query using hive-router's parser (graphql_tools) for type compatibility
+        let parsed_query = safe_parse_operation(query)
+            .map_err(|e| HivePlannerError::QueryParseError(e.to_string()))?;
 
         // Normalize the operation
         let normalized = normalize_operation(&planner.supergraph, &parsed_query, operation_name)
