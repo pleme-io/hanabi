@@ -2992,6 +2992,32 @@ rec {
           "default" = [ "std" ];
         };
       };
+      "filetime" = rec {
+        crateName = "filetime";
+        version = "0.2.27";
+        edition = "2018";
+        sha256 = "1nspbkm1d1km7xfljcbl565swqxrihqyin8bqppig2gf3qal927r";
+        authors = [
+          "Alex Crichton <alex@alexcrichton.com>"
+        ];
+        dependencies = [
+          {
+            name = "cfg-if";
+            packageId = "cfg-if";
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+            target = { target, features }: (target."unix" or false);
+          }
+          {
+            name = "libredox";
+            packageId = "libredox";
+            target = { target, features }: ("redox" == target."os" or null);
+          }
+        ];
+
+      };
       "find-msvc-tools" = rec {
         crateName = "find-msvc-tools";
         version = "0.1.9";
@@ -3787,27 +3813,6 @@ rec {
         };
         resolvedDefaultFeatures = [ "dashmap" "default" "futures" "futures-timer" "jitter" "quanta" "rand" "std" ];
       };
-      "graphql-parser" = rec {
-        crateName = "graphql-parser";
-        version = "0.4.1";
-        edition = "2018";
-        sha256 = "02gl4na7df21qlnwhyww4yz342bm2w4r3gi7vw0hhz1xi06qr0bs";
-        libName = "graphql_parser";
-        authors = [
-          "Paul Colomiets <paul@colomiets.name>"
-        ];
-        dependencies = [
-          {
-            name = "combine";
-            packageId = "combine";
-          }
-          {
-            name = "thiserror";
-            packageId = "thiserror 1.0.69";
-          }
-        ];
-
-      };
       "graphql-tools" = rec {
         crateName = "graphql-tools";
         version = "0.5.1";
@@ -3987,16 +3992,16 @@ rec {
             packageId = "dashmap 6.1.0";
           }
           {
+            name = "flate2";
+            packageId = "flate2";
+          }
+          {
             name = "futures-util";
             packageId = "futures-util";
           }
           {
             name = "governor";
             packageId = "governor";
-          }
-          {
-            name = "graphql-parser";
-            packageId = "graphql-parser";
           }
           {
             name = "hex";
@@ -4131,6 +4136,10 @@ rec {
           {
             name = "sys-info";
             packageId = "sys-info";
+          }
+          {
+            name = "tar";
+            packageId = "tar";
           }
           {
             name = "thiserror";
@@ -5739,6 +5748,37 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "extra_traits" "std" ];
       };
+      "libredox" = rec {
+        crateName = "libredox";
+        version = "0.1.12";
+        edition = "2021";
+        sha256 = "05h6fb2y05h74zwaafmnf7gv3bxilzp7syqlfzw524w55kh9a2rx";
+        authors = [
+          "4lDO2 <4lDO2@protonmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "bitflags";
+            packageId = "bitflags";
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+          }
+          {
+            name = "redox_syscall";
+            packageId = "redox_syscall 0.7.1";
+            optional = true;
+          }
+        ];
+        features = {
+          "default" = [ "call" "std" "redox_syscall" ];
+          "ioslice" = [ "dep:ioslice" ];
+          "mkns" = [ "ioslice" ];
+          "redox_syscall" = [ "dep:redox_syscall" ];
+        };
+        resolvedDefaultFeatures = [ "call" "default" "redox_syscall" "std" ];
+      };
       "linux-raw-sys 0.11.0" = rec {
         crateName = "linux-raw-sys";
         version = "0.11.0";
@@ -7161,7 +7201,7 @@ rec {
           }
           {
             name = "redox_syscall";
-            packageId = "redox_syscall";
+            packageId = "redox_syscall 0.5.18";
             target = { target, features }: ("redox" == target."os" or null);
           }
           {
@@ -8753,11 +8793,33 @@ rec {
         };
         resolvedDefaultFeatures = [ "acl" "aio" "async-trait" "backon" "bytes" "connection-manager" "default" "futures" "futures-util" "geospatial" "keep-alive" "pin-project-lite" "script" "sha1_smol" "socket2" "streams" "tokio" "tokio-comp" "tokio-util" ];
       };
-      "redox_syscall" = rec {
+      "redox_syscall 0.5.18" = rec {
         crateName = "redox_syscall";
         version = "0.5.18";
         edition = "2021";
         sha256 = "0b9n38zsxylql36vybw18if68yc9jczxmbyzdwyhb9sifmag4azd";
+        libName = "syscall";
+        authors = [
+          "Jeremy Soller <jackpot51@gmail.com>"
+        ];
+        dependencies = [
+          {
+            name = "bitflags";
+            packageId = "bitflags";
+          }
+        ];
+        features = {
+          "core" = [ "dep:core" ];
+          "default" = [ "userspace" ];
+          "rustc-dep-of-std" = [ "core" "bitflags/rustc-dep-of-std" ];
+        };
+        resolvedDefaultFeatures = [ "default" "userspace" ];
+      };
+      "redox_syscall 0.7.1" = rec {
+        crateName = "redox_syscall";
+        version = "0.7.1";
+        edition = "2021";
+        sha256 = "0axziqgk7mg2cwmr03qq250z24gxhqn02cn29zi05p5d22k5m61m";
         libName = "syscall";
         authors = [
           "Jeremy Soller <jackpot51@gmail.com>"
@@ -11731,6 +11793,37 @@ rec {
           "Oliver Giersch"
         ];
 
+      };
+      "tar" = rec {
+        crateName = "tar";
+        version = "0.4.44";
+        edition = "2021";
+        sha256 = "0yk69a8j9xv51mdcy0853jai5zh1pd9yn456q4cpmj0js9w3i1hx";
+        authors = [
+          "Alex Crichton <alex@alexcrichton.com>"
+        ];
+        dependencies = [
+          {
+            name = "filetime";
+            packageId = "filetime";
+          }
+          {
+            name = "libc";
+            packageId = "libc";
+            target = { target, features }: (target."unix" or false);
+          }
+          {
+            name = "xattr";
+            packageId = "xattr";
+            optional = true;
+            target = { target, features }: (target."unix" or false);
+          }
+        ];
+        features = {
+          "default" = [ "xattr" ];
+          "xattr" = [ "dep:xattr" ];
+        };
+        resolvedDefaultFeatures = [ "default" "xattr" ];
       };
       "tempfile" = rec {
         crateName = "tempfile";
@@ -18084,6 +18177,33 @@ rec {
           "default" = [ "alloc" ];
           "either" = [ "dep:either" ];
         };
+      };
+      "xattr" = rec {
+        crateName = "xattr";
+        version = "1.6.1";
+        edition = "2021";
+        sha256 = "0ml1mb43gqasawillql6b344m0zgq8mz0isi11wj8vbg43a5mr1j";
+        authors = [
+          "Steven Allen <steven@stebalien.com>"
+        ];
+        dependencies = [
+          {
+            name = "libc";
+            packageId = "libc";
+            target = { target, features }: (("freebsd" == target."os" or null) || ("netbsd" == target."os" or null));
+          }
+          {
+            name = "rustix";
+            packageId = "rustix 1.1.3";
+            usesDefaultFeatures = false;
+            target = { target, features }: (("android" == target."os" or null) || ("linux" == target."os" or null) || ("macos" == target."os" or null) || ("hurd" == target."os" or null));
+            features = [ "fs" "std" ];
+          }
+        ];
+        features = {
+          "default" = [ "unsupported" ];
+        };
+        resolvedDefaultFeatures = [ "default" "unsupported" ];
       };
       "xxhash-rust" = rec {
         crateName = "xxhash-rust";
