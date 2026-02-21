@@ -39,7 +39,7 @@ redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 async-nats = "0.38"
 
 # Startup notifications (Discord, Grafana, health probes)
-pleme-notifications = { git = "https://github.com/pleme-io/pleme-notifications" }
+pleme-notifications = "0.1"
 
 # UUID for session IDs
 uuid = { version = "1.11", features = ["v4", "serde"] }
