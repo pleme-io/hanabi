@@ -49,5 +49,13 @@
     packages = eachSystem (system: (mkOutputs system).packages);
     devShells = eachSystem (system: (mkOutputs system).devShells);
     apps = eachSystem (system: (mkOutputs system).apps);
+
+    homeManagerModules.default = import ./module {
+      hmHelpers = import "${substrate}/lib/hm-service-helpers.nix" { lib = nixpkgs.lib; };
+    };
+    nixosModules.default = import ./module/nixos.nix;
+    overlays.default = final: prev: {
+      hanabi = self.packages.${final.system}.default;
+    };
   };
 }
