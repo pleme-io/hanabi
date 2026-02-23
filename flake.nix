@@ -25,37 +25,16 @@
     };
   };
 
-  outputs = { self, nixpkgs, fenix, substrate, forge, crate2nix, ... }: let
-    systems = ["aarch64-darwin" "x86_64-linux" "aarch64-linux"];
-    eachSystem = f: nixpkgs.lib.genAttrs systems f;
-
-    mkOutputs = system: let
-      rustService = import "${substrate}/lib/rust-service.nix" {
-        inherit system nixpkgs;
-        nixLib = substrate;
-        crate2nix = crate2nix.packages.${system}.default;
-        forge = forge.packages.${system}.default;
-      };
-    in rustService {
+  outputs = { self, nixpkgs, substrate, forge, crate2nix, ... }:
+    (import "${substrate}/lib/rust-service-flake.nix" {
+      inherit nixpkgs substrate forge crate2nix;
+    }) {
+      inherit self;
       serviceName = "hanabi";
-      src = self;
       registry = "ghcr.io/pleme-io/hanabi";
       packageName = "hanabi";
       namespace = "hanabi-system";
       architectures = ["amd64" "arm64"];
       ports = { graphql = 80; health = 8080; metrics = 8080; };
     };
-  in {
-    packages = eachSystem (system: (mkOutputs system).packages);
-    devShells = eachSystem (system: (mkOutputs system).devShells);
-    apps = eachSystem (system: (mkOutputs system).apps);
-
-    homeManagerModules.default = import ./module {
-      hmHelpers = import "${substrate}/lib/hm-service-helpers.nix" { lib = nixpkgs.lib; };
-    };
-    nixosModules.default = import ./module/nixos.nix;
-    overlays.default = final: prev: {
-      hanabi = self.packages.${final.system}.default;
-    };
-  };
 }
