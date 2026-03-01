@@ -1,10 +1,16 @@
 [package]
-name = "hanabi"
+name = "hanabi-bff"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
+authors = ["Pleme Team <team@pleme.io>"]
 repository = "https://github.com/pleme-io/hanabi"
+homepage = "https://github.com/pleme-io/hanabi"
+readme = "README.md"
 description = "Hanabi (花火) - GraphQL Federation BFF platform service"
+keywords = ["graphql", "federation", "bff", "gateway", "axum"]
+categories = ["web-programming::http-server", "network-programming"]
+exclude = ["module/", "target/", "result-*", "Cargo.nix", "flake.*", "hanabi-lint/", "load-test-results.json"]
 
 [lib]
 name = "hanabi"
