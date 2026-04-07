@@ -475,4 +475,132 @@ mod tests {
 
         assert!(ctx.is_cancelled());
     }
+
+    #[test]
+    fn test_with_details_preserves_fields() {
+        let ctx = RequestContext::with_details(
+            Duration::from_secs(10),
+            Some("user-42".to_string()),
+            Some("trace-abc".to_string()),
+            "storefront".to_string(),
+        );
+        assert_eq!(ctx.user_id(), Some("user-42"));
+        assert_eq!(ctx.trace_id(), Some("trace-abc"));
+        assert_eq!(ctx.product(), "storefront");
+        assert!(!ctx.is_expired());
+        assert!(!ctx.is_cancelled());
+    }
+
+    #[test]
+    fn test_with_details_none_fields() {
+        let ctx = RequestContext::with_details(
+            Duration::from_secs(10),
+            None,
+            None,
+            String::new(),
+        );
+        assert!(ctx.user_id().is_none());
+        assert!(ctx.trace_id().is_none());
+        assert_eq!(ctx.product(), "");
+    }
+
+    #[test]
+    fn test_child_inherits_user_context() {
+        let parent = RequestContext::with_details(
+            Duration::from_secs(30),
+            Some("user-1".to_string()),
+            Some("trace-1".to_string()),
+            "myapp".to_string(),
+        );
+        let child = parent.child();
+        assert_eq!(child.user_id(), Some("user-1"));
+        assert_eq!(child.trace_id(), Some("trace-1"));
+        assert_eq!(child.product(), "myapp");
+    }
+
+    #[test]
+    fn test_child_with_timeout_uses_min_of_parent_and_child() {
+        let parent = RequestContext::new(Duration::from_secs(5));
+        // Child requests 60s, but parent only has ~5s left
+        let child = parent.child_with_timeout(Duration::from_secs(60));
+        // Child deadline should be at most parent's deadline
+        assert!(child.deadline() <= parent.deadline());
+    }
+
+    #[test]
+    fn test_cancel_token_shares_cancellation() {
+        let ctx = RequestContext::new(Duration::from_secs(30));
+        let token = ctx.cancel_token();
+        assert!(!token.is_cancelled());
+        ctx.cancel();
+        assert!(token.is_cancelled());
+    }
+
+    #[test]
+    fn test_child_cancel_does_not_cancel_parent() {
+        let parent = RequestContext::new(Duration::from_secs(30));
+        let child = parent.child();
+        child.cancel();
+        assert!(child.is_cancelled());
+        assert!(!parent.is_cancelled());
+    }
+
+    #[test]
+    fn test_elapsed_increases() {
+        let ctx = RequestContext::new(Duration::from_secs(30));
+        let e1 = ctx.elapsed();
+        std::thread::sleep(Duration::from_millis(2));
+        let e2 = ctx.elapsed();
+        assert!(e2 > e1);
+    }
+
+    #[test]
+    fn test_start_time_is_before_now() {
+        let ctx = RequestContext::new(Duration::from_secs(30));
+        assert!(ctx.start_time() <= Instant::now());
+    }
+
+    #[test]
+    fn test_debug_format_includes_request_id() {
+        let ctx = RequestContext::new(Duration::from_secs(30));
+        let debug = format!("{:?}", ctx);
+        assert!(debug.contains("RequestContext"));
+        assert!(debug.contains("request_id"));
+        assert!(debug.contains("remaining"));
+    }
+
+    #[test]
+    fn test_context_error_display() {
+        let deadline: ContextError<String> = ContextError::DeadlineExceeded;
+        assert_eq!(format!("{}", deadline), "deadline exceeded");
+
+        let cancelled: ContextError<String> = ContextError::Cancelled;
+        assert_eq!(format!("{}", cancelled), "request cancelled");
+
+        let op: ContextError<String> = ContextError::Operation("db failed".to_string());
+        assert_eq!(format!("{}", op), "db failed");
+    }
+
+    #[test]
+    fn test_context_error_implements_std_error() {
+        let err: ContextError<std::io::Error> =
+            ContextError::Operation(std::io::Error::new(std::io::ErrorKind::Other, "test"));
+        let _: &dyn std::error::Error = &err;
+    }
+
+    #[test]
+    fn test_remaining_zero_when_expired() {
+        let ctx = RequestContext::new(Duration::from_millis(1));
+        std::thread::sleep(Duration::from_millis(5));
+        assert_eq!(ctx.remaining(), Duration::ZERO);
+        assert!(ctx.is_expired());
+    }
+
+    #[test]
+    fn test_has_time_for_boundary() {
+        let ctx = RequestContext::new(Duration::from_secs(10));
+        // Exactly 10s should pass since remaining is slightly less
+        assert!(!ctx.has_time_for(Duration::from_secs(10)));
+        assert!(ctx.has_time_for(Duration::from_secs(9)));
+    }
 }

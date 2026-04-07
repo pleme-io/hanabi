@@ -1494,4 +1494,174 @@ mod tests {
             AdmissionResult::Admitted(_)
         ));
     }
+
+    #[test]
+    fn test_circuit_breaker_half_open_lifecycle() {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 1,
+            recovery_timeout: Duration::from_millis(10),
+            success_threshold: 2,
+            half_open_requests: 3,
+            failure_window: Duration::from_secs(60),
+        };
+        let breaker = CircuitBreaker::new("test-svc", config, None);
+
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        std::thread::sleep(Duration::from_millis(15));
+
+        match breaker.allow_request() {
+            CircuitCheckResult::Allowed => {}
+            other => panic!("Expected Allowed after recovery timeout, got {:?}", other),
+        }
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+
+        breaker.record_success();
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+
+        breaker.record_success();
+        assert_eq!(breaker.state(), CircuitState::Closed);
+    }
+
+    #[test]
+    fn test_circuit_breaker_half_open_failure_reopens() {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 1,
+            recovery_timeout: Duration::from_millis(10),
+            success_threshold: 5,
+            half_open_requests: 3,
+            failure_window: Duration::from_secs(60),
+        };
+        let breaker = CircuitBreaker::new("test-svc", config, None);
+
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+
+        std::thread::sleep(Duration::from_millis(15));
+        let _ = breaker.allow_request();
+        assert_eq!(breaker.state(), CircuitState::HalfOpen);
+
+        breaker.record_failure();
+        assert_eq!(breaker.state(), CircuitState::Open);
+    }
+
+    #[test]
+    fn test_circuit_breaker_half_open_limits_requests() {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 1,
+            recovery_timeout: Duration::from_millis(10),
+            success_threshold: 10,
+            half_open_requests: 2,
+            failure_window: Duration::from_secs(60),
+        };
+        let breaker = CircuitBreaker::new("test-svc", config, None);
+
+        breaker.record_failure();
+        std::thread::sleep(Duration::from_millis(15));
+
+        assert!(matches!(breaker.allow_request(), CircuitCheckResult::Allowed));
+        assert!(matches!(breaker.allow_request(), CircuitCheckResult::Allowed));
+
+        match breaker.allow_request() {
+            CircuitCheckResult::Rejected { reason: RejectionReason::CircuitOpen, retry_after } => {
+                assert_eq!(retry_after, Some(Duration::from_secs(1)));
+            }
+            other => panic!("Expected rejection after half_open_requests exceeded, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_circuit_breaker_success_resets_failure_count() {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 3,
+            ..Default::default()
+        };
+        let breaker = CircuitBreaker::new("test", config, None);
+
+        breaker.record_failure();
+        breaker.record_failure();
+        breaker.record_success();
+        breaker.record_failure();
+        breaker.record_failure();
+        // Should still be closed since success reset the counter
+        assert_eq!(breaker.state(), CircuitState::Closed);
+    }
+
+    #[test]
+    fn test_circuit_breaker_registry_creates_and_reuses() {
+        let config = CircuitBreakerConfig::default();
+        let registry = CircuitBreakerRegistry::new(config, None);
+
+        let b1 = registry.get("users");
+        let b2 = registry.get("users");
+        let b3 = registry.get("posts");
+
+        assert_eq!(b1.state(), CircuitState::Closed);
+        assert_eq!(b2.state(), CircuitState::Closed);
+        assert_eq!(b3.state(), CircuitState::Closed);
+
+        b1.record_failure();
+        assert_eq!(b2.state(), b1.state());
+    }
+
+    #[test]
+    fn test_circuit_breaker_registry_states() {
+        let config = CircuitBreakerConfig {
+            failure_threshold: 1,
+            ..Default::default()
+        };
+        let registry = CircuitBreakerRegistry::new(config, None);
+
+        let _ = registry.get("users");
+        let posts = registry.get("posts");
+        posts.record_failure();
+
+        let states = registry.states();
+        assert_eq!(states.len(), 2);
+
+        let users_state = states.iter().find(|(n, _)| n == "users").unwrap();
+        assert_eq!(users_state.1, CircuitState::Closed);
+
+        let posts_state = states.iter().find(|(n, _)| n == "posts").unwrap();
+        assert_eq!(posts_state.1, CircuitState::Open);
+    }
+
+    #[test]
+    fn test_deadline_remaining_shrinks() {
+        let deadline = Deadline::new(Duration::from_secs(10));
+        let r1 = deadline.remaining().unwrap();
+        std::thread::sleep(Duration::from_millis(5));
+        let r2 = deadline.remaining().unwrap();
+        assert!(r2 < r1);
+    }
+
+    #[test]
+    fn test_deadline_remaining_none_when_exceeded() {
+        let deadline = Deadline::new(Duration::from_millis(1));
+        std::thread::sleep(Duration::from_millis(5));
+        assert!(deadline.remaining().is_none());
+        assert!(deadline.is_exceeded());
+    }
+
+    #[test]
+    fn test_deadline_has_time_for_false_when_exceeded() {
+        let deadline = Deadline::new(Duration::from_millis(1));
+        std::thread::sleep(Duration::from_millis(5));
+        assert!(!deadline.has_time_for(Duration::ZERO));
+    }
+
+    #[test]
+    fn test_rejection_reason_display() {
+        assert!(format!("{}", RejectionReason::ConcurrencyLimit).contains("oncurrency"));
+        assert!(format!("{}", RejectionReason::CircuitOpen).contains("ircuit"));
+    }
+
+    #[test]
+    fn test_circuit_state_roundtrip() {
+        assert_eq!(CircuitState::from_u8(STATE_CLOSED), CircuitState::Closed);
+        assert_eq!(CircuitState::from_u8(STATE_OPEN), CircuitState::Open);
+        assert_eq!(CircuitState::from_u8(STATE_HALF_OPEN), CircuitState::HalfOpen);
+        assert_eq!(CircuitState::from_u8(255), CircuitState::Closed);
+    }
 }

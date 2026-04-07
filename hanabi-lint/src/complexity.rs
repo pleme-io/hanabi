@@ -372,4 +372,205 @@ mod tests {
         assert!(metrics[0].cognitive_complexity > 2); // Nested penalty
         assert_eq!(metrics[0].nesting_depth, 2);
     }
+
+    #[test]
+    fn test_loop_increases_complexity() {
+        let metrics = analyze_code(
+            r#"
+            fn with_loop() {
+                loop {
+                    break;
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].cyclomatic_complexity, 2); // 1 base + 1 loop
+    }
+
+    #[test]
+    fn test_while_increases_complexity() {
+        let metrics = analyze_code(
+            r#"
+            fn with_while(mut x: i32) {
+                while x > 0 {
+                    x -= 1;
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].cyclomatic_complexity, 2);
+    }
+
+    #[test]
+    fn test_logical_operators_increase_complexity() {
+        let metrics = analyze_code(
+            r#"
+            fn with_logic(a: bool, b: bool, c: bool) {
+                if a && b || c {
+                    println!("complex");
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics.len(), 1);
+        // 1 base + 1 if + 1 && + 1 || = 4
+        assert_eq!(metrics[0].cyclomatic_complexity, 4);
+    }
+
+    #[test]
+    fn test_match_with_guard() {
+        let metrics = analyze_code(
+            r#"
+            fn with_guard(x: Option<i32>) {
+                match x {
+                    Some(v) if v > 0 => println!("positive"),
+                    Some(_) => println!("non-positive"),
+                    None => println!("none"),
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics.len(), 1);
+        // 1 base + 2 arms (3-1) + 1 guard = 4
+        assert_eq!(metrics[0].cyclomatic_complexity, 4);
+    }
+
+    #[test]
+    fn test_impl_method_tracked() {
+        let metrics = analyze_code(
+            r#"
+            struct Foo;
+            impl Foo {
+                fn bar(&self, x: bool) {
+                    if x { println!("yes"); }
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].name, "bar");
+        assert_eq!(metrics[0].cyclomatic_complexity, 2);
+    }
+
+    #[test]
+    fn test_multiple_functions_tracked() {
+        let metrics = analyze_code(
+            r#"
+            fn first() { }
+            fn second(x: bool) {
+                if x { println!("y"); }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics.len(), 2);
+        assert_eq!(metrics[0].name, "first");
+        assert_eq!(metrics[0].cyclomatic_complexity, 1);
+        assert_eq!(metrics[1].name, "second");
+        assert_eq!(metrics[1].cyclomatic_complexity, 2);
+    }
+
+    #[test]
+    fn test_loc_placeholder_returns_10() {
+        let metrics = analyze_code("fn x() { let a = 1; }");
+        assert_eq!(metrics[0].lines_of_code, 10);
+    }
+
+    #[test]
+    fn test_exceeds_thresholds() {
+        let m = FunctionMetrics {
+            name: "complex".to_string(),
+            path: PathBuf::from("test.rs"),
+            line: 1,
+            cyclomatic_complexity: 15,
+            cognitive_complexity: 5,
+            lines_of_code: 10,
+            nesting_depth: 2,
+        };
+        assert!(m.exceeds_thresholds(10, 20));
+        assert!(m.exceeds_thresholds(20, 4));
+        assert!(!m.exceeds_thresholds(20, 20));
+    }
+
+    #[test]
+    fn test_complexity_summary_from_empty() {
+        let summary = ComplexitySummary::from_metrics(&[], 10, 10);
+        assert_eq!(summary.total_functions, 0);
+        assert_eq!(summary.avg_cyclomatic, 0.0);
+        assert_eq!(summary.max_cyclomatic, 0);
+    }
+
+    #[test]
+    fn test_complexity_summary_from_metrics() {
+        let metrics = vec![
+            FunctionMetrics {
+                name: "a".to_string(),
+                path: PathBuf::from("t.rs"),
+                line: 1,
+                cyclomatic_complexity: 2,
+                cognitive_complexity: 3,
+                lines_of_code: 10,
+                nesting_depth: 1,
+            },
+            FunctionMetrics {
+                name: "b".to_string(),
+                path: PathBuf::from("t.rs"),
+                line: 10,
+                cyclomatic_complexity: 8,
+                cognitive_complexity: 12,
+                lines_of_code: 10,
+                nesting_depth: 3,
+            },
+        ];
+
+        let summary = ComplexitySummary::from_metrics(&metrics, 5, 10);
+        assert_eq!(summary.total_functions, 2);
+        assert_eq!(summary.avg_cyclomatic, 5.0); // (2+8)/2
+        assert_eq!(summary.max_cyclomatic, 8);
+        assert_eq!(summary.avg_cognitive, 7.5); // (3+12)/2
+        assert_eq!(summary.max_cognitive, 12);
+        assert_eq!(summary.functions_exceeding_cc, 1); // b > 5
+        assert_eq!(summary.functions_exceeding_cognitive, 1); // b > 10
+        assert_eq!(summary.high_complexity_functions.len(), 1);
+        assert_eq!(summary.high_complexity_functions[0].name, "b");
+    }
+
+    #[test]
+    fn test_passes_thresholds() {
+        let summary = ComplexitySummary {
+            avg_cyclomatic: 5.0,
+            avg_cognitive: 8.0,
+            ..Default::default()
+        };
+        assert!(summary.passes_thresholds(5.0, 8.0));
+        assert!(summary.passes_thresholds(10.0, 10.0));
+        assert!(!summary.passes_thresholds(4.9, 8.0));
+        assert!(!summary.passes_thresholds(5.0, 7.9));
+    }
+
+    #[test]
+    fn test_deeply_nested_nesting_depth() {
+        let metrics = analyze_code(
+            r#"
+            fn deep(a: bool, b: bool, c: bool) {
+                if a {
+                    if b {
+                        if c {
+                            println!("deep");
+                        }
+                    }
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(metrics[0].nesting_depth, 3);
+    }
 }

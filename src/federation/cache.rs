@@ -620,6 +620,262 @@ mod tests {
         assert_eq!(cached.unwrap().data, response);
     }
 
+    #[tokio::test]
+    async fn test_cache_disabled_returns_none() {
+        let config = ResponseCacheConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        let cache = ResponseCache::new(config, None, None);
+
+        let key = CacheKey::new(
+            Some("op".to_string()),
+            "query { x }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        cache
+            .set(&key, serde_json::json!({"data": {"x": 1}}))
+            .await;
+        assert!(cache.get(&key).await.is_none());
+    }
+
+    #[test]
+    fn test_cache_is_enabled() {
+        let enabled = ResponseCache::new(ResponseCacheConfig::default(), None, None);
+        assert!(enabled.is_enabled());
+
+        let disabled = ResponseCache::new(
+            ResponseCacheConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            None,
+            None,
+        );
+        assert!(!disabled.is_enabled());
+    }
+
+    #[tokio::test]
+    async fn test_cache_skips_error_responses() {
+        let config = ResponseCacheConfig {
+            cache_only_success: true,
+            ..Default::default()
+        };
+        let cache = ResponseCache::new(config, None, None);
+
+        let key = CacheKey::new(
+            Some("failOp".to_string()),
+            "query { fail }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        let error_response = serde_json::json!({
+            "data": null,
+            "errors": [{"message": "something failed"}]
+        });
+
+        cache.set(&key, error_response).await;
+        assert!(cache.get(&key).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_cache_allows_error_responses_when_configured() {
+        let config = ResponseCacheConfig {
+            cache_only_success: false,
+            ..Default::default()
+        };
+        let cache = ResponseCache::new(config, None, None);
+
+        let key = CacheKey::new(
+            Some("failOp".to_string()),
+            "query { fail }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        let error_response = serde_json::json!({
+            "data": null,
+            "errors": [{"message": "cached error"}]
+        });
+
+        cache.set(&key, error_response.clone()).await;
+        let cached = cache.get(&key).await;
+        assert!(cached.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_cache_skips_oversized_responses() {
+        let config = ResponseCacheConfig {
+            max_entry_size: 10,
+            ..Default::default()
+        };
+        let cache = ResponseCache::new(config, None, None);
+
+        let key = CacheKey::new(
+            Some("bigOp".to_string()),
+            "query { big }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        let big_response = serde_json::json!({
+            "data": {"big_field": "a".repeat(100)}
+        });
+
+        cache.set(&key, big_response).await;
+        assert!(cache.get(&key).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_cache_invalidate() {
+        let config = ResponseCacheConfig::default();
+        let cache = ResponseCache::new(config, None, None);
+
+        let key = CacheKey::new(
+            Some("op".to_string()),
+            "query { x }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        cache.set(&key, serde_json::json!({"data": 1})).await;
+        assert!(cache.get(&key).await.is_some());
+
+        cache.invalidate(&key).await;
+        assert!(cache.get(&key).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_cache_invalidate_all() {
+        let config = ResponseCacheConfig::default();
+        let cache = ResponseCache::new(config, None, None);
+
+        let key1 = CacheKey::new(
+            Some("op1".to_string()),
+            "q1".to_string(),
+            None,
+            "app".to_string(),
+        );
+        let key2 = CacheKey::new(
+            Some("op2".to_string()),
+            "q2".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        cache.set(&key1, serde_json::json!({"data": 1})).await;
+        cache.set(&key2, serde_json::json!({"data": 2})).await;
+
+        cache.invalidate_all().await;
+
+        assert!(cache.get(&key1).await.is_none());
+        assert!(cache.get(&key2).await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_cache_stats() {
+        let config = ResponseCacheConfig::default();
+        let cache = ResponseCache::new(config, None, None);
+
+        let stats = cache.stats();
+        assert_eq!(stats.entry_count, 0);
+
+        let key = CacheKey::new(
+            Some("op".to_string()),
+            "q".to_string(),
+            None,
+            "app".to_string(),
+        );
+        cache.set(&key, serde_json::json!({"data": 1})).await;
+        // moka may need a moment to update entry_count
+        cache.cache.run_pending_tasks().await;
+
+        let stats = cache.stats();
+        assert_eq!(stats.entry_count, 1);
+    }
+
+    #[test]
+    fn test_ttl_strategy_disabled() {
+        let config = ResponseCacheConfig {
+            strategies: vec![CacheStrategy {
+                operation_pattern: "getProducts".to_string(),
+                ttl_secs: 0,
+                enabled: false,
+            }],
+            default_ttl_secs: 60,
+            ..Default::default()
+        };
+
+        let cache = ResponseCache::new(config, None, None);
+        assert_eq!(cache.get_ttl_for_operation(Some("getProducts")), 60);
+    }
+
+    #[test]
+    fn test_ttl_no_operation_name() {
+        let config = ResponseCacheConfig {
+            default_ttl_secs: 45,
+            ..Default::default()
+        };
+        let cache = ResponseCache::new(config, None, None);
+        assert_eq!(cache.get_ttl_for_operation(None), 45);
+    }
+
+    #[tokio::test]
+    async fn test_cache_empty_errors_array_is_cacheable() {
+        let config = ResponseCacheConfig {
+            cache_only_success: true,
+            ..Default::default()
+        };
+        let cache = ResponseCache::new(config, None, None);
+
+        let key = CacheKey::new(
+            Some("op".to_string()),
+            "q".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        let response = serde_json::json!({
+            "data": {"x": 1},
+            "errors": []
+        });
+
+        cache.set(&key, response).await;
+        assert!(cache.get(&key).await.is_some());
+    }
+
+    #[test]
+    fn test_cache_key_no_operation_name() {
+        let key = CacheKey::new(
+            None,
+            "{ anonymous }".to_string(),
+            None,
+            "app".to_string(),
+        );
+        let _ = key.hash(); // should not panic
+    }
+
+    #[test]
+    fn test_cache_key_no_variables() {
+        let key1 = CacheKey::new(
+            Some("op".to_string()),
+            "q".to_string(),
+            None,
+            "app".to_string(),
+        );
+        let key2 = CacheKey::new(
+            Some("op".to_string()),
+            "q".to_string(),
+            Some(serde_json::json!({})),
+            "app".to_string(),
+        );
+        // None vs empty object should be different
+        assert_ne!(key1.hash(), key2.hash());
+    }
+
     // Property-based tests using proptest
     mod proptest_tests {
         use super::*;

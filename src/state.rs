@@ -1087,15 +1087,67 @@ mod tests {
 
     #[test]
     fn test_app_state_is_clone() {
-        // Verify AppState implements Clone (required for Axum State)
         fn assert_clone<T: Clone>() {}
         assert_clone::<AppState>();
     }
 
     #[test]
     fn test_app_state_is_send_sync() {
-        // Verify AppState is Send + Sync (required for async handlers)
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<AppState>();
+    }
+
+    #[test]
+    fn test_extensions_insert_and_get() {
+        let mut ext = Extensions::new();
+        ext.insert(42u32);
+        ext.insert("hello".to_string());
+
+        assert_eq!(ext.get::<u32>(), Some(&42));
+        assert_eq!(ext.get::<String>(), Some(&"hello".to_string()));
+    }
+
+    #[test]
+    fn test_extensions_get_missing_type() {
+        let ext = Extensions::new();
+        assert!(ext.get::<u32>().is_none());
+    }
+
+    #[test]
+    fn test_extensions_overwrite() {
+        let mut ext = Extensions::new();
+        ext.insert(10u32);
+        ext.insert(20u32);
+        assert_eq!(ext.get::<u32>(), Some(&20));
+    }
+
+    #[test]
+    fn test_extensions_different_types_dont_collide() {
+        let mut ext = Extensions::new();
+        ext.insert(42u32);
+        ext.insert(42i32);
+        ext.insert(42u64);
+
+        assert_eq!(ext.get::<u32>(), Some(&42u32));
+        assert_eq!(ext.get::<i32>(), Some(&42i32));
+        assert_eq!(ext.get::<u64>(), Some(&42u64));
+    }
+
+    #[test]
+    fn test_extensions_with_custom_struct() {
+        #[derive(Debug, PartialEq)]
+        struct MyState {
+            count: usize,
+        }
+
+        let mut ext = Extensions::new();
+        ext.insert(MyState { count: 5 });
+        assert_eq!(ext.get::<MyState>(), Some(&MyState { count: 5 }));
+    }
+
+    #[test]
+    fn test_extensions_default() {
+        let ext = Extensions::default();
+        assert!(ext.get::<u32>().is_none());
     }
 }
