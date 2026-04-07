@@ -384,4 +384,241 @@ mod tests {
         assert_eq!(violations.len(), 1);
         assert_eq!(violations[0].kind, ViolationKind::Todo);
     }
+
+    #[test]
+    fn test_detects_unreachable_macro() {
+        let violations = analyze_code(
+            r#"
+            fn main() {
+                unreachable!("should not happen");
+            }
+        "#,
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].kind, ViolationKind::Unreachable);
+    }
+
+    #[test]
+    fn test_detects_unimplemented_macro() {
+        let violations = analyze_code(
+            r#"
+            fn main() {
+                unimplemented!();
+            }
+        "#,
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert_eq!(violations[0].kind, ViolationKind::Unimplemented);
+    }
+
+    #[test]
+    fn test_expect_allowed_in_static() {
+        let violations = analyze_code(
+            r#"
+            static RE: i32 = {
+                let x: Option<i32> = Some(1);
+                x.expect("static init")
+            };
+        "#,
+        );
+
+        let production: Vec<_> = violations.iter().filter(|v| !v.in_test).collect();
+        // expect in static should NOT produce a violation
+        assert!(
+            production.iter().all(|v| v.kind != ViolationKind::Expect),
+            "expect in static should be allowed"
+        );
+    }
+
+    #[test]
+    fn test_unwrap_still_detected_in_static() {
+        let violations = analyze_code(
+            r#"
+            static VAL: i32 = {
+                let x: Option<i32> = Some(1);
+                x.unwrap()
+            };
+        "#,
+        );
+
+        let unwraps: Vec<_> = violations
+            .iter()
+            .filter(|v| v.kind == ViolationKind::Unwrap)
+            .collect();
+        assert_eq!(unwraps.len(), 1);
+    }
+
+    #[test]
+    fn test_test_fn_attribute() {
+        let violations = analyze_code(
+            r#"
+            fn prod() {
+                let _ = Some(1).unwrap();
+            }
+
+            #[test]
+            fn test_something() {
+                let _ = Some(1).unwrap();
+            }
+        "#,
+        );
+
+        let production: Vec<_> = violations.iter().filter(|v| !v.in_test).collect();
+        let test: Vec<_> = violations.iter().filter(|v| v.in_test).collect();
+        assert_eq!(production.len(), 1);
+        assert_eq!(test.len(), 1);
+    }
+
+    #[test]
+    fn test_mod_named_tests_is_test_context() {
+        let violations = analyze_code(
+            r#"
+            mod tests {
+                fn helper() {
+                    let _ = Some(1).unwrap();
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].in_test);
+    }
+
+    #[test]
+    fn test_mod_named_test_is_test_context() {
+        let violations = analyze_code(
+            r#"
+            mod test {
+                fn helper() {
+                    let _ = Some(1).unwrap();
+                }
+            }
+        "#,
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].in_test);
+    }
+
+    #[test]
+    fn test_multiple_violations_in_same_fn() {
+        let violations = analyze_code(
+            r#"
+            fn multi() {
+                let a = Some(1).unwrap();
+                let b = Some(2).expect("b");
+                panic!("oh no");
+            }
+        "#,
+        );
+
+        assert_eq!(violations.len(), 3);
+        assert_eq!(violations[0].kind, ViolationKind::Unwrap);
+        assert_eq!(violations[1].kind, ViolationKind::Expect);
+        assert_eq!(violations[2].kind, ViolationKind::Panic);
+    }
+
+    #[test]
+    fn test_violation_kind_as_str() {
+        assert_eq!(ViolationKind::Unwrap.as_str(), "unwrap()");
+        assert_eq!(ViolationKind::Expect.as_str(), "expect()");
+        assert_eq!(ViolationKind::Panic.as_str(), "panic!()");
+        assert_eq!(ViolationKind::Unreachable.as_str(), "unreachable!()");
+        assert_eq!(ViolationKind::Todo.as_str(), "todo!()");
+        assert_eq!(ViolationKind::Unimplemented.as_str(), "unimplemented!()");
+    }
+
+    #[test]
+    fn test_violation_kind_severity_all_error() {
+        assert_eq!(ViolationKind::Unwrap.severity(), "error");
+        assert_eq!(ViolationKind::Expect.severity(), "error");
+        assert_eq!(ViolationKind::Panic.severity(), "error");
+        assert_eq!(ViolationKind::Unreachable.severity(), "error");
+        assert_eq!(ViolationKind::Todo.severity(), "error");
+        assert_eq!(ViolationKind::Unimplemented.severity(), "error");
+    }
+
+    #[test]
+    fn test_violation_summary_from_violations() {
+        let violations = vec![
+            Violation {
+                path: PathBuf::from("a.rs"),
+                line: 1,
+                column: 1,
+                kind: ViolationKind::Unwrap,
+                context: String::new(),
+                in_test: false,
+            },
+            Violation {
+                path: PathBuf::from("a.rs"),
+                line: 2,
+                column: 1,
+                kind: ViolationKind::Unwrap,
+                context: String::new(),
+                in_test: true,
+            },
+            Violation {
+                path: PathBuf::from("b.rs"),
+                line: 1,
+                column: 1,
+                kind: ViolationKind::Panic,
+                context: String::new(),
+                in_test: false,
+            },
+        ];
+
+        let summary = ViolationSummary::from_violations(&violations);
+        assert_eq!(summary.total, 3);
+        assert_eq!(summary.production, 2);
+        assert_eq!(summary.test, 1);
+        assert_eq!(summary.by_kind.get("unwrap()"), Some(&2));
+        assert_eq!(summary.by_kind.get("panic!()"), Some(&1));
+    }
+
+    #[test]
+    fn test_violation_summary_empty() {
+        let summary = ViolationSummary::from_violations(&[]);
+        assert_eq!(summary.total, 0);
+        assert_eq!(summary.production, 0);
+        assert_eq!(summary.test, 0);
+        assert!(summary.by_kind.is_empty());
+    }
+
+    #[test]
+    fn test_violation_kind_serde() {
+        let json = serde_json::to_string(&ViolationKind::Unwrap).unwrap();
+        assert_eq!(json, "\"unwrap\"");
+        let json = serde_json::to_string(&ViolationKind::Unreachable).unwrap();
+        assert_eq!(json, "\"unreachable\"");
+    }
+
+    #[test]
+    fn test_violation_has_line_and_column() {
+        let violations = analyze_code(
+            r#"fn main() {
+    let x = Some(1).unwrap();
+}"#,
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].line > 0);
+        assert!(violations[0].column > 0);
+    }
+
+    #[test]
+    fn test_violation_context_contains_code() {
+        let violations = analyze_code(
+            r#"
+            fn main() {
+                let val = Some(42).unwrap();
+            }
+        "#,
+        );
+
+        assert_eq!(violations.len(), 1);
+        assert!(violations[0].context.contains("unwrap"));
+    }
 }

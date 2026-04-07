@@ -620,4 +620,123 @@ mod tests {
         let err = BatchError::with_keys("partial failure", vec!["key1".to_string()]);
         assert_eq!(err.failed_keys.len(), 1);
     }
+
+    #[test]
+    fn test_batch_error_display() {
+        let err = BatchError::new("connection refused");
+        assert_eq!(format!("{}", err), "Batch error: connection refused");
+    }
+
+    #[test]
+    fn test_batch_error_is_std_error() {
+        let err = BatchError::new("test");
+        let _: &dyn std::error::Error = &err;
+    }
+
+    #[test]
+    fn test_batch_error_with_multiple_keys() {
+        let err = BatchError::with_keys(
+            "multiple failures",
+            vec!["k1".to_string(), "k2".to_string(), "k3".to_string()],
+        );
+        assert_eq!(err.failed_keys.len(), 3);
+        assert_eq!(err.failed_keys[0], "k1");
+    }
+
+    #[test]
+    fn test_build_entities_query_shape() {
+        let reps = vec![
+            EntityRepresentationBuilder::build("User", "id", "1"),
+            EntityRepresentationBuilder::build("User", "id", "2"),
+        ];
+
+        let (query, variables) = EntityRepresentationBuilder::build_entities_query(
+            &reps,
+            "id name email",
+        );
+
+        assert!(query.contains("$representations"));
+        assert!(query.contains("_entities"));
+        assert!(query.contains("id name email"));
+
+        let reps_val = &variables["representations"];
+        assert!(reps_val.is_array());
+        assert_eq!(reps_val.as_array().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn test_build_entities_query_empty_representations() {
+        let (query, variables) = EntityRepresentationBuilder::build_entities_query(
+            &[],
+            "id",
+        );
+        assert!(query.contains("_entities"));
+        assert_eq!(variables["representations"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn test_entity_representation_build_composite_empty() {
+        let rep = EntityRepresentationBuilder::build_composite("Void", &[]);
+        assert_eq!(rep["__typename"], "Void");
+        assert_eq!(rep.as_object().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_batcher_load_missing_key() {
+        let loader = |_keys: Vec<String>| {
+            Box::pin(async move {
+                Ok(HashMap::new()) // Returns nothing
+            })
+                as Pin<Box<dyn Future<Output = Result<HashMap<String, String>, BatchError>> + Send>>
+        };
+
+        let batcher = EntityBatcher::new(
+            BatchConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            loader,
+            None,
+        );
+
+        let result = batcher.load("missing".to_string()).await.unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[tokio::test]
+    async fn test_batcher_load_error() {
+        let loader = |_keys: Vec<String>| {
+            Box::pin(async move {
+                Err(BatchError::new("loader failed"))
+            })
+                as Pin<Box<dyn Future<Output = Result<HashMap<String, String>, BatchError>> + Send>>
+        };
+
+        let batcher = EntityBatcher::new(
+            BatchConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            loader,
+            None,
+        );
+
+        let result = batcher.load("key".to_string()).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().message, "loader failed");
+    }
+
+    #[test]
+    fn test_batch_config_custom() {
+        let config = BatchConfig {
+            enabled: false,
+            batch_window_ms: 50,
+            max_batch_size: 200,
+            enable_cache: false,
+            cache_ttl_ms: 5000,
+        };
+        assert!(!config.enabled);
+        assert_eq!(config.batch_window_ms, 50);
+        assert_eq!(config.max_batch_size, 200);
+    }
 }

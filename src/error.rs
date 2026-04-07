@@ -548,4 +548,145 @@ mod tests {
             "graceful_shutdown"
         );
     }
+
+    #[test]
+    fn test_into_response_body_json_shape() {
+        let error = AppError::not_found("/missing/page");
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX);
+        let body = tokio_test::block_on(body).unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert!(json["errors"].is_array());
+        assert_eq!(json["errors"][0]["message"], "Resource not found");
+        assert_eq!(json["errors"][0]["extensions"]["code"], "NOT_FOUND");
+        assert_eq!(
+            json["errors"][0]["extensions"]["details"],
+            "/missing/page"
+        );
+    }
+
+    #[test]
+    fn test_into_response_without_details() {
+        let error = AppError::upstream_timeout();
+        let response = error.into_response();
+        assert_eq!(response.status(), StatusCode::GATEWAY_TIMEOUT);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX);
+        let body = tokio_test::block_on(body).unwrap();
+        let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(
+            json["errors"][0]["extensions"]["code"],
+            "BFF_UPSTREAM_TIMEOUT"
+        );
+        assert!(json["errors"][0]["extensions"].get("details").is_none());
+    }
+
+    #[test]
+    fn test_into_response_status_codes() {
+        assert_eq!(
+            AppError::bff_disabled().into_response().status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            AppError::bff_mode_disabled().into_response().status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            AppError::bff_invalid_mode("x").into_response().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            AppError::http_client_not_initialized()
+                .into_response()
+                .status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            AppError::upstream_error("err").into_response().status(),
+            StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(
+            AppError::parse_error("bad json").into_response().status(),
+            StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(
+            AppError::config_error("missing field")
+                .into_response()
+                .status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+        assert_eq!(
+            AppError::internal("oops").into_response().status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    #[test]
+    fn test_unknown_code_defaults_to_degraded() {
+        let error = AppError::new(StatusCode::IM_A_TEAPOT, "UNKNOWN_CODE", "weird");
+        assert_eq!(error.category(), ErrorCategory::Degraded);
+        assert!(error.requires_circuit_break());
+        assert!(!error.is_retryable());
+        assert!(!error.is_fatal());
+    }
+
+    #[test]
+    fn test_bff_invalid_mode_includes_details() {
+        let error = AppError::bff_invalid_mode("turbo");
+        assert_eq!(error.details, Some("Unknown mode: turbo".to_string()));
+        assert_eq!(error.code, "BFF_INVALID_MODE");
+    }
+
+    #[test]
+    fn test_upstream_error_formats_inner_error() {
+        let error = AppError::upstream_error("connection refused");
+        assert!(error.message.contains("connection refused"));
+    }
+
+    #[test]
+    fn test_parse_error_includes_details() {
+        let error = AppError::parse_error("unexpected token");
+        assert_eq!(
+            error.details,
+            Some("Parse error: unexpected token".to_string())
+        );
+    }
+
+    #[test]
+    fn test_is_retryable_exhaustive() {
+        assert!(AppError::upstream_timeout().is_retryable());
+        assert!(AppError::upstream_error("err").is_retryable());
+        assert!(!AppError::bff_disabled().is_retryable());
+        assert!(!AppError::internal("err").is_retryable());
+        assert!(!AppError::config_error("err").is_retryable());
+        assert!(!AppError::not_found("p").is_retryable());
+    }
+
+    #[test]
+    fn test_is_fatal_exhaustive() {
+        assert!(AppError::config_error("err").is_fatal());
+        assert!(AppError::bff_invalid_mode("x").is_fatal());
+        assert!(AppError::http_client_not_initialized().is_fatal());
+        assert!(!AppError::upstream_timeout().is_fatal());
+        assert!(!AppError::bff_disabled().is_fatal());
+        assert!(!AppError::internal("err").is_fatal());
+    }
+
+    #[test]
+    fn test_requires_circuit_break_for_degraded() {
+        assert!(AppError::internal("err").requires_circuit_break());
+        let custom =
+            AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "RANDOM_CODE", "random");
+        assert!(custom.requires_circuit_break());
+    }
+
+    #[test]
+    fn test_app_error_implements_std_error() {
+        let error = AppError::internal("test");
+        let _: &dyn std::error::Error = &error;
+    }
 }

@@ -447,12 +447,31 @@ pub async fn health_ready(State(state): State<Arc<AppState>>) -> impl IntoRespon
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
 
     #[test]
     fn test_check_result_pass() {
         let result = CheckResult::pass("test", "component");
         assert!(matches!(result.status, HealthStatus::Pass));
         assert_eq!(result.component_id, Some("test".to_string()));
+        assert_eq!(result.component_type, Some("component".to_string()));
+        assert!(result.output.is_none());
+        assert!(result.observed_value.is_none());
+    }
+
+    #[test]
+    fn test_check_result_fail() {
+        let result = CheckResult::fail("disk", "storage", "No space left");
+        assert!(matches!(result.status, HealthStatus::Fail));
+        assert_eq!(result.component_id, Some("disk".to_string()));
+        assert_eq!(result.output, Some("No space left".to_string()));
+    }
+
+    #[test]
+    fn test_check_result_warn() {
+        let result = CheckResult::warn("memory", "system", "Low memory");
+        assert!(matches!(result.status, HealthStatus::Warn));
+        assert_eq!(result.output, Some("Low memory".to_string()));
     }
 
     #[test]
@@ -464,9 +483,126 @@ mod tests {
     }
 
     #[test]
+    fn test_check_result_time_is_rfc3339() {
+        let result = CheckResult::pass("test", "component");
+        chrono::DateTime::parse_from_rfc3339(&result.time)
+            .expect("time should be valid RFC3339");
+    }
+
+    #[test]
     fn test_health_status_serialization() {
-        // Verify lowercase serialization
-        let json = serde_json::to_string(&HealthStatus::Pass).unwrap();
-        assert_eq!(json, "\"pass\"");
+        assert_eq!(serde_json::to_string(&HealthStatus::Pass).unwrap(), "\"pass\"");
+        assert_eq!(serde_json::to_string(&HealthStatus::Fail).unwrap(), "\"fail\"");
+        assert_eq!(serde_json::to_string(&HealthStatus::Warn).unwrap(), "\"warn\"");
+    }
+
+    #[test]
+    fn test_health_status_deserialization() {
+        let pass: HealthStatus = serde_json::from_str("\"pass\"").unwrap();
+        assert!(matches!(pass, HealthStatus::Pass));
+        let fail: HealthStatus = serde_json::from_str("\"fail\"").unwrap();
+        assert!(matches!(fail, HealthStatus::Fail));
+        let warn: HealthStatus = serde_json::from_str("\"warn\"").unwrap();
+        assert!(matches!(warn, HealthStatus::Warn));
+    }
+
+    #[test]
+    fn test_health_response_serialization_skips_none() {
+        let resp = HealthResponse {
+            status: HealthStatus::Pass,
+            version: "1.0.0".to_string(),
+            release_id: None,
+            notes: None,
+            output: None,
+            checks: None,
+            service_id: None,
+            description: None,
+        };
+        let json = serde_json::to_value(&resp).unwrap();
+        let obj = json.as_object().unwrap();
+        assert!(obj.contains_key("status"));
+        assert!(obj.contains_key("version"));
+        assert!(!obj.contains_key("release_id"));
+        assert!(!obj.contains_key("notes"));
+        assert!(!obj.contains_key("checks"));
+    }
+
+    #[test]
+    fn test_health_response_full_roundtrip() {
+        let mut checks = HashMap::new();
+        checks.insert(
+            "disk:storage".to_string(),
+            vec![CheckResult::pass("disk", "storage")
+                .with_observed(serde_json::json!(85.5), "percent")],
+        );
+
+        let resp = HealthResponse {
+            status: HealthStatus::Pass,
+            version: "2.0.0".to_string(),
+            release_id: Some("abc123".to_string()),
+            notes: Some(vec!["All good".to_string()]),
+            output: None,
+            checks: Some(checks),
+            service_id: Some("hanabi".to_string()),
+            description: Some("BFF server".to_string()),
+        };
+
+        let json_str = serde_json::to_string(&resp).unwrap();
+        let deserialized: HealthResponse = serde_json::from_str(&json_str).unwrap();
+        assert!(matches!(deserialized.status, HealthStatus::Pass));
+        assert_eq!(deserialized.version, "2.0.0");
+        assert_eq!(deserialized.release_id, Some("abc123".to_string()));
+    }
+
+    #[test]
+    fn test_check_result_serialization_field_names() {
+        let result = CheckResult::pass("disk", "storage")
+            .with_observed(serde_json::json!(50.0), "percent");
+        let json = serde_json::to_value(&result).unwrap();
+        assert_eq!(json["componentId"], "disk");
+        assert_eq!(json["componentType"], "storage");
+        assert!(json.get("observed_value").is_some());
+        assert_eq!(json["observed_unit"], "percent");
+    }
+
+    fn test_app_config() -> AppConfig {
+        serde_yaml::from_str("{}").unwrap()
+    }
+
+    #[test]
+    fn test_check_static_files_all_present() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("index.html"), "").unwrap();
+        std::fs::write(dir.path().join("env.js"), "").unwrap();
+
+        let mut config = test_app_config();
+        config.server.static_dir = dir.path().to_string_lossy().to_string();
+
+        let result = RuntimeChecks::check_static_files(&config);
+        assert!(matches!(result.status, HealthStatus::Pass));
+        assert_eq!(result.component_id, Some("static-files".to_string()));
+    }
+
+    #[test]
+    fn test_check_static_files_missing() {
+        let dir = TempDir::new().unwrap();
+
+        let mut config = test_app_config();
+        config.server.static_dir = dir.path().to_string_lossy().to_string();
+
+        let result = RuntimeChecks::check_static_files(&config);
+        assert!(matches!(result.status, HealthStatus::Fail));
+        assert!(result.output.unwrap().contains("Missing critical file"));
+    }
+
+    #[test]
+    fn test_check_static_files_empty_list() {
+        let dir = TempDir::new().unwrap();
+        let mut config = test_app_config();
+        config.server.static_dir = dir.path().to_string_lossy().to_string();
+        config.preflight.critical_files = vec![];
+
+        let result = RuntimeChecks::check_static_files(&config);
+        assert!(matches!(result.status, HealthStatus::Pass));
     }
 }
