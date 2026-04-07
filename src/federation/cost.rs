@@ -523,4 +523,137 @@ mod tests {
         let result = analyzer.analyze(query).expect("should analyze");
         assert!(result.is_expensive);
     }
+
+    #[test]
+    fn test_parse_error_for_invalid_graphql() {
+        let analyzer = test_analyzer();
+        let result = analyzer.analyze("this is not graphql {{{");
+        assert!(result.is_ok() || result.is_err());
+        // Even invalid queries shouldn't panic - they either parse partially or error
+    }
+
+    #[test]
+    fn test_empty_query() {
+        let analyzer = test_analyzer();
+        let query = "query { }";
+        let result = analyzer.analyze(query);
+        // Empty selection should work without panic
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[test]
+    fn test_cost_error_display() {
+        let err = CostError::CostExceeded {
+            cost: 500,
+            max_cost: 100,
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("500"));
+        assert!(msg.contains("100"));
+
+        let err = CostError::ParseError("unexpected token".to_string());
+        assert!(format!("{}", err).contains("unexpected token"));
+    }
+
+    #[test]
+    fn test_max_cost_zero_means_unlimited() {
+        let config = CostConfig {
+            max_cost: 0,
+            ..Default::default()
+        };
+        let analyzer = CostAnalyzer::new(config, None);
+
+        let query = r#"
+            query {
+                products(first: 10000) {
+                    name
+                    description
+                }
+            }
+        "#;
+
+        let result = analyzer.analyze(query);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_not_expensive_below_threshold() {
+        let config = CostConfig {
+            expensive_threshold: 1000,
+            max_cost: 0,
+            ..Default::default()
+        };
+        let analyzer = CostAnalyzer::new(config, None);
+
+        let query = r#"
+            query {
+                user {
+                    name
+                }
+            }
+        "#;
+
+        let result = analyzer.analyze(query).unwrap();
+        assert!(!result.is_expensive);
+    }
+
+    #[test]
+    fn test_limit_argument_as_list_size() {
+        let analyzer = test_analyzer();
+        let query = r#"
+            query {
+                items(limit: 50) {
+                    name
+                }
+            }
+        "#;
+
+        let result = analyzer.analyze(query).unwrap();
+        assert!(result.total_cost >= 50);
+        assert_eq!(result.list_count, 1);
+    }
+
+    #[test]
+    fn test_last_argument_as_list_size() {
+        let analyzer = test_analyzer();
+        let query = r#"
+            query {
+                items(last: 25) {
+                    name
+                }
+            }
+        "#;
+
+        let result = analyzer.analyze(query).unwrap();
+        assert!(result.total_cost >= 25);
+    }
+
+    #[test]
+    fn test_default_config_values() {
+        let config = CostConfig::default();
+        assert_eq!(config.default_field_cost, 1);
+        assert_eq!(config.default_list_multiplier, 10);
+        assert_eq!(config.default_list_size, 10);
+        assert!(config.free_fields.contains("id"));
+        assert!(config.free_fields.contains("__typename"));
+    }
+
+    #[test]
+    fn test_fragment_spread_has_cost() {
+        let analyzer = test_analyzer();
+        let query = r#"
+            query {
+                user {
+                    ...UserFields
+                }
+            }
+            fragment UserFields on User {
+                name
+                email
+            }
+        "#;
+
+        let result = analyzer.analyze(query).unwrap();
+        assert!(result.total_cost > 0);
+    }
 }

@@ -627,3 +627,196 @@ impl PerfectionReport {
         output
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_perfection_state_as_str() {
+        assert_eq!(PerfectionState::Perfect.as_str(), "PERFECT");
+        assert_eq!(PerfectionState::Stable.as_str(), "STABLE");
+        assert_eq!(PerfectionState::Degraded.as_str(), "DEGRADED");
+    }
+
+    #[test]
+    fn test_perfection_state_emoji() {
+        assert!(!PerfectionState::Perfect.emoji().is_empty());
+        assert!(!PerfectionState::Stable.emoji().is_empty());
+        assert!(!PerfectionState::Degraded.emoji().is_empty());
+    }
+
+    #[test]
+    fn test_perfection_state_description() {
+        assert!(PerfectionState::Perfect.description().contains("backlog empty"));
+        assert!(PerfectionState::Stable.description().contains("backlog"));
+        assert!(PerfectionState::Degraded.description().contains("failing"));
+    }
+
+    #[test]
+    fn test_perfection_state_serde() {
+        assert_eq!(
+            serde_json::to_string(&PerfectionState::Perfect).unwrap(),
+            "\"perfect\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PerfectionState::Stable).unwrap(),
+            "\"stable\""
+        );
+        assert_eq!(
+            serde_json::to_string(&PerfectionState::Degraded).unwrap(),
+            "\"degraded\""
+        );
+    }
+
+    #[test]
+    fn test_perfection_state_equality() {
+        assert_eq!(PerfectionState::Perfect, PerfectionState::Perfect);
+        assert_ne!(PerfectionState::Perfect, PerfectionState::Stable);
+        assert_ne!(PerfectionState::Stable, PerfectionState::Degraded);
+    }
+
+    #[test]
+    fn test_gate_result_serde() {
+        let gate = GateResult {
+            name: "Test Gate".to_string(),
+            passed: true,
+            message: "All good".to_string(),
+            details: vec!["detail1".to_string()],
+        };
+        let json = serde_json::to_value(&gate).unwrap();
+        assert_eq!(json["name"], "Test Gate");
+        assert_eq!(json["passed"], true);
+        assert_eq!(json["message"], "All good");
+        assert!(json["details"].is_array());
+        assert_eq!(json["details"][0], "detail1");
+    }
+
+    #[test]
+    fn test_gate_result_failing() {
+        let gate = GateResult {
+            name: "Failing Gate".to_string(),
+            passed: false,
+            message: "3 violations".to_string(),
+            details: vec!["a".to_string(), "b".to_string(), "c".to_string()],
+        };
+        let json = serde_json::to_value(&gate).unwrap();
+        assert_eq!(json["passed"], false);
+        assert_eq!(json["details"].as_array().unwrap().len(), 3);
+    }
+
+    fn make_test_report(all_pass: bool, backlog_empty: bool) -> PerfectionReport {
+        let violations = if all_pass { vec![] } else {
+            vec![Violation {
+                path: std::path::PathBuf::from("test.rs"),
+                line: 1,
+                column: 1,
+                kind: crate::unwrap_detector::ViolationKind::Unwrap,
+                context: "unwrap()".to_string(),
+                in_test: false,
+            }]
+        };
+
+        let cargo = CargoCheckSummary {
+            all_passed: true,
+            results: vec![],
+            total_duration_ms: 0,
+        };
+
+        let backlog = BacklogSummary {
+            total_open: if backlog_empty { 0 } else { 3 },
+            total_in_progress: 0,
+            total_completed: 0,
+            by_category: Default::default(),
+            by_priority: Default::default(),
+            items: vec![],
+        };
+
+        PerfectionReport::new(
+            &violations,
+            ComplexitySummary::default(),
+            cargo,
+            ModularitySummary::default(),
+            CoverageSummary {
+                passed: true,
+                line_coverage: 100.0,
+                branch_coverage: None,
+                lines_covered: 100,
+                lines_total: 100,
+                branches_covered: None,
+                branches_total: None,
+                tool_available: false,
+                message: "ok".to_string(),
+                uncovered_files: vec![],
+            },
+            ConfigSummary::default(),
+            HygieneSummary::default(),
+            RefactoringSummary::default(),
+            None,
+            backlog,
+            100,
+            10,
+            15,
+        )
+    }
+
+    #[test]
+    fn test_report_perfect_state() {
+        let report = make_test_report(true, true);
+        assert_eq!(report.state, PerfectionState::Perfect);
+        assert_eq!(report.gates_passed, report.gates_total);
+    }
+
+    #[test]
+    fn test_report_stable_state() {
+        let report = make_test_report(true, false);
+        assert_eq!(report.state, PerfectionState::Stable);
+    }
+
+    #[test]
+    fn test_report_degraded_state() {
+        let report = make_test_report(false, true);
+        assert_eq!(report.state, PerfectionState::Degraded);
+        assert!(report.gates_passed < report.gates_total);
+    }
+
+    #[test]
+    fn test_report_to_json() {
+        let report = make_test_report(true, true);
+        let json_str = report.to_json();
+        let parsed: serde_json::Value = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(parsed["state"], "perfect");
+        assert!(parsed["gates"].is_array());
+        assert!(parsed["gates_total"].as_u64().unwrap() > 0);
+    }
+
+    #[test]
+    fn test_report_to_pretty_contains_gates() {
+        let report = make_test_report(true, true);
+        let pretty = report.to_pretty();
+        assert!(pretty.contains("Gate:"));
+        assert!(pretty.contains("SUMMARY"));
+    }
+
+    #[test]
+    fn test_report_gate_count() {
+        let report = make_test_report(true, true);
+        assert_eq!(report.gates_total, 22);
+    }
+
+    #[test]
+    fn test_report_missing_cargo_results_default_to_pass() {
+        let report = make_test_report(true, true);
+        let clippy_gate = report.gates.iter().find(|g| g.name == "Clippy Clean").unwrap();
+        assert!(clippy_gate.passed);
+        assert!(clippy_gate.message.contains("not run"));
+    }
+
+    #[test]
+    fn test_report_missing_audit_defaults_to_pass() {
+        let report = make_test_report(true, true);
+        let audit_gate = report.gates.iter().find(|g| g.name == "Security Audit").unwrap();
+        assert!(audit_gate.passed);
+        assert!(audit_gate.message.contains("skipped"));
+    }
+}

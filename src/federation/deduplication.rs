@@ -527,4 +527,138 @@ mod tests {
         // Should return None when disabled
         assert!(dedup.deduplicate(&key).is_none());
     }
+
+    #[test]
+    fn test_is_enabled() {
+        let dedup = RequestDeduplicator::new(DeduplicationConfig::default(), None);
+        assert!(dedup.is_enabled());
+
+        let disabled = RequestDeduplicator::new(
+            DeduplicationConfig {
+                enabled: false,
+                ..Default::default()
+            },
+            None,
+        );
+        assert!(!disabled.is_enabled());
+    }
+
+    #[test]
+    fn test_complete_removes_entry() {
+        let dedup = RequestDeduplicator::new(DeduplicationConfig::default(), None);
+
+        let key = DeduplicationKey::new(
+            Some("op".to_string()),
+            "query { x }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        let result = dedup.deduplicate(&key);
+        assert!(matches!(result, Some(DeduplicationResult::Leader { .. })));
+        assert_eq!(dedup.stats().in_flight_count, 1);
+
+        dedup.complete(
+            &key,
+            DeduplicatedResult {
+                data: serde_json::json!({"data": null}),
+                from_cache: false,
+            },
+        );
+        assert_eq!(dedup.stats().in_flight_count, 0);
+    }
+
+    #[test]
+    fn test_cancel_removes_entry() {
+        let dedup = RequestDeduplicator::new(DeduplicationConfig::default(), None);
+
+        let key = DeduplicationKey::new(
+            Some("op".to_string()),
+            "query { x }".to_string(),
+            None,
+            "app".to_string(),
+        );
+
+        let _result = dedup.deduplicate(&key);
+        assert_eq!(dedup.stats().in_flight_count, 1);
+
+        dedup.cancel(&key);
+        assert_eq!(dedup.stats().in_flight_count, 0);
+    }
+
+    #[test]
+    fn test_cancel_nonexistent_is_safe() {
+        let dedup = RequestDeduplicator::new(DeduplicationConfig::default(), None);
+        let key = DeduplicationKey::new(
+            Some("nope".to_string()),
+            "q".to_string(),
+            None,
+            "a".to_string(),
+        );
+        dedup.cancel(&key); // should not panic
+    }
+
+    #[test]
+    fn test_stats_initial() {
+        let dedup = RequestDeduplicator::new(DeduplicationConfig::default(), None);
+        assert_eq!(dedup.stats().in_flight_count, 0);
+    }
+
+    #[test]
+    fn test_max_wait_duration() {
+        let config = DeduplicationConfig {
+            max_wait_secs: 7,
+            ..Default::default()
+        };
+        let dedup = RequestDeduplicator::new(config, None);
+        assert_eq!(dedup.max_wait_duration(), Duration::from_secs(7));
+    }
+
+    #[test]
+    fn test_capacity_limit() {
+        let config = DeduplicationConfig {
+            max_entries: 2,
+            ..Default::default()
+        };
+        let dedup = RequestDeduplicator::new(config, None);
+
+        let key1 = DeduplicationKey::new(None, "q1".to_string(), None, "a".to_string());
+        let key2 = DeduplicationKey::new(None, "q2".to_string(), None, "a".to_string());
+        let key3 = DeduplicationKey::new(None, "q3".to_string(), None, "a".to_string());
+
+        let _r1 = dedup.deduplicate(&key1);
+        let _r2 = dedup.deduplicate(&key2);
+
+        // At capacity, third different key should return None (skip)
+        let r3 = dedup.deduplicate(&key3);
+        assert!(r3.is_none());
+    }
+
+    #[test]
+    fn test_dedup_key_no_operation_name() {
+        let key = DeduplicationKey::new(
+            None,
+            "{ anonymous }".to_string(),
+            None,
+            "app".to_string(),
+        );
+        let _ = key.hash(); // should not panic
+    }
+
+    #[test]
+    fn test_dedup_key_whitespace_normalization() {
+        let key1 = DeduplicationKey::new(
+            Some("op".to_string()),
+            "query { x }".to_string(),
+            None,
+            "app".to_string(),
+        );
+        let key2 = DeduplicationKey::new(
+            Some("op".to_string()),
+            "query  {  x  }".to_string(),
+            None,
+            "app".to_string(),
+        );
+        assert_eq!(key1.hash(), key2.hash());
+    }
 }
