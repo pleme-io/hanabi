@@ -52,3 +52,8 @@ pub mod traits;
 pub mod builder;
 pub mod server;
 pub mod providers;
+
+// Proxy, L4, and service mesh
+pub mod proxy;
+pub mod l4;
+pub mod mesh;
