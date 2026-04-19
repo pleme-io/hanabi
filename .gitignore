@@ -2,3 +2,4 @@ target/
 result*
 .direnv/
 load-test-results.json
+crate-hashes.json
