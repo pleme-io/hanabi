@@ -7,7 +7,6 @@ use std::net::SocketAddr;
 
 use axum::Router;
 use socket2::{Domain, Socket, Type};
-use tokio::signal;
 use tracing::{error, info, warn};
 
 use crate::config::AppConfig;
@@ -194,40 +193,12 @@ pub async fn run_server(
     Ok(())
 }
 
-/// Graceful shutdown signal handler (SIGTERM + SIGINT).
+/// Graceful drain signal handler (SIGTERM + SIGINT).
+///
+/// Thin wrapper over `tsunagu::ShutdownController::install()` — kept as a
+/// free function because the existing call sites (above) are structured
+/// around a single await point inside `run_servers`. Once those call sites
+/// migrate to the token API directly, this helper can be deleted.
 pub async fn shutdown_signal() {
-    let ctrl_c = async {
-        match signal::ctrl_c().await {
-            Ok(()) => {}
-            Err(e) => {
-                error!("Failed to listen for Ctrl+C signal: {}", e);
-                std::future::pending::<()>().await;
-            }
-        }
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        match signal::unix::signal(signal::unix::SignalKind::terminate()) {
-            Ok(mut signal) => {
-                signal.recv().await;
-            }
-            Err(e) => {
-                error!("Failed to install SIGTERM handler: {}", e);
-                std::future::pending::<()>().await;
-            }
-        }
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {
-            warn!("Received SIGINT (Ctrl+C), initiating graceful shutdown...");
-        },
-        _ = terminate => {
-            warn!("Received SIGTERM, initiating graceful shutdown...");
-        },
-    }
+    tsunagu::ShutdownController::install().token().wait().await;
 }
