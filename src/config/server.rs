@@ -39,6 +39,33 @@ pub struct ServerConfig {
     /// Enable TCP_NODELAY (default: true for low latency)
     pub tcp_nodelay: bool,
 
+    /// Server role. Default `Standalone` (the historical mode — full
+    /// edge BFF). Set to `Sidecar` when running as the L7 sub-component
+    /// of a pleme-io mesh data plane (Sprint M3 of theory/MESH.md):
+    /// hanabi binds loopback only, skips static-file serving, expects
+    /// the colocated workload at `upstream_loopback`, and reads its
+    /// L7 policy block from `policy_source`.
+    #[serde(default)]
+    pub role: ServerRole,
+
+    /// In `Sidecar` mode, the loopback URL of the colocated workload
+    /// container hanabi forwards plaintext to (e.g.
+    /// `http://127.0.0.1:8082`). Ignored in `Standalone` mode.
+    #[serde(default)]
+    pub upstream_loopback: Option<String>,
+
+    /// In `Sidecar` mode, filesystem path or unix socket where the
+    /// renderer drops the typed L7 policy block (CSP per-route,
+    /// rate-limit per-edge, etc). Ignored in `Standalone` mode.
+    #[serde(default)]
+    pub policy_source: Option<String>,
+
+    /// In `Sidecar` mode, suppress all static-file serving paths
+    /// (sidecar mode is pure L7 pass-through). Default `false` so
+    /// existing standalone callers are untouched.
+    #[serde(default)]
+    pub no_static: bool,
+
     /// S3 webapp sources — download webapp archives from S3 at startup
     ///
     /// Each source downloads a tar.gz archive from S3 and extracts it to a target
@@ -170,7 +197,102 @@ impl Default for ServerConfig {
             max_concurrent_connections: 10000,
             worker_threads: 0,
             tcp_nodelay: true,
+            role: ServerRole::default(),
+            upstream_loopback: None,
+            policy_source: None,
+            no_static: false,
             webapp_sources: Vec::new(),
         }
+    }
+}
+
+/// Server role — `Standalone` (full edge BFF, the historical
+/// behavior) or `Sidecar` (L7 sub-component of a pleme-io mesh data
+/// plane; see theory/MESH.md §V).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ServerRole {
+    Standalone,
+    Sidecar,
+}
+
+impl Default for ServerRole {
+    fn default() -> Self {
+        Self::Standalone
+    }
+}
+
+impl ServerConfig {
+    /// True when the config requests sidecar (mesh-L7) mode.
+    #[must_use]
+    pub fn is_sidecar(&self) -> bool {
+        self.role == ServerRole::Sidecar
+    }
+
+    /// True when static-file paths should be skipped in this mode —
+    /// either explicitly via `no_static`, or implicit when running as
+    /// a sidecar.
+    #[must_use]
+    pub fn skip_static(&self) -> bool {
+        self.no_static || self.is_sidecar()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults_are_standalone() {
+        let cfg = ServerConfig::default();
+        assert_eq!(cfg.role, ServerRole::Standalone);
+        assert!(!cfg.is_sidecar());
+        assert!(!cfg.skip_static());
+        assert!(cfg.upstream_loopback.is_none());
+        assert!(cfg.policy_source.is_none());
+        assert!(!cfg.no_static);
+    }
+
+    #[test]
+    fn sidecar_role_implies_skip_static() {
+        let mut cfg = ServerConfig::default();
+        cfg.role = ServerRole::Sidecar;
+        assert!(cfg.is_sidecar());
+        // Sidecar always skips static, even without explicit no_static.
+        assert!(cfg.skip_static());
+    }
+
+    #[test]
+    fn explicit_no_static_in_standalone_skips() {
+        let mut cfg = ServerConfig::default();
+        cfg.no_static = true;
+        assert!(!cfg.is_sidecar());
+        assert!(cfg.skip_static());
+    }
+
+    #[test]
+    fn yaml_round_trip_preserves_role_and_slots() {
+        let yaml = r#"
+http_port: 0
+health_port: 0
+static_dir: ""
+service_name: "x"
+service_version: "1"
+bind_address: "127.0.0.1"
+request_timeout_secs: 30
+keepalive_timeout_secs: 75
+max_concurrent_connections: 100
+worker_threads: 0
+tcp_nodelay: true
+role: sidecar
+upstream_loopback: "http://127.0.0.1:8082"
+policy_source: "/etc/hanabi/policy.yaml"
+no_static: true
+"#;
+        let cfg: ServerConfig = serde_yaml::from_str(yaml).unwrap();
+        assert!(cfg.is_sidecar());
+        assert_eq!(cfg.upstream_loopback.as_deref(), Some("http://127.0.0.1:8082"));
+        assert_eq!(cfg.policy_source.as_deref(), Some("/etc/hanabi/policy.yaml"));
+        assert!(cfg.no_static);
     }
 }
