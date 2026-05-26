@@ -3983,7 +3983,7 @@ rec {
       };
       "hanabi-bff" = rec {
         crateName = "hanabi-bff";
-        version = "1.0.0";
+        version = "1.0.1";
         edition = "2021";
         crateBin = [
           {
