@@ -2272,9 +2272,9 @@ dependencies = [
 
 [[package]]
 name = "pleme-notifications"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8c4bdecc1a8b30067e0f9b2cede60b7e38168768334aa3aeb4fa4b84b59f237"
+checksum = "c50468d8dafa6598ee740aaea0e57550d4fda92718acc88c6fcbe68783583dba"
 dependencies = [
  "chrono",
  "reqwest",
@@ -4068,7 +4068,7 @@ dependencies = [
 [[package]]
 name = "tsunagu"
 version = "0.1.1"
-source = "git+https://github.com/pleme-io/tsunagu#fd557288d430eeae93ad1604c7ed9d3ab92d0920"
+source = "git+https://github.com/pleme-io/tsunagu#00a785cc41dc39a8788c3072925f267c24b51f30"
 dependencies = [
  "dirs",
  "serde",
