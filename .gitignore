@@ -3,3 +3,4 @@ result*
 .direnv/
 load-test-results.json
 crate-hashes.json
+Cargo.build-spec.json
