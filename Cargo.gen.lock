@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cargo_lock_sha256": "413d5e55b261959b54ad82fe11e42f0608ee7e4f35eab47d0ee5047e5f2be56b",
+  "cargo_lock_sha256": "b9732a40dd3c008112a21ab067e4c51e07ed2017a38a4d39fc623d2b27b6e4c5",
   "target_resolves": {
     "base": {
       "adler2-2.0.1": {
@@ -5437,7 +5437,7 @@
           },
           {
             "name": "socket2",
-            "package_key": "socket2-0.6.3",
+            "package_key": "socket2-0.5.10",
             "kind": "normal",
             "features": [
               "all"
@@ -7755,7 +7755,7 @@
           },
           {
             "name": "socket2",
-            "package_key": "socket2-0.6.3",
+            "package_key": "socket2-0.5.10",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -7957,7 +7957,7 @@
           },
           {
             "name": "socket2",
-            "package_key": "socket2-0.6.3",
+            "package_key": "socket2-0.5.10",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -10693,7 +10693,9 @@
           }
         ],
         "build_dependencies": [],
-        "features": []
+        "features": [
+          "all"
+        ]
       },
       "socket2-0.6.3": {
         "runtime_dependencies": [
@@ -20169,7 +20171,7 @@
     }
   },
   "git_nar_sha256": {
-    "tsunagu-0.1.1": "sha256-6iPoIJbuPPW2/Chc51c+nys6kxEFbH8F9v6w5aadDP4="
+    "tsunagu-0.1.1": "sha256-TfiZRLXx7D0bftYfxX54XgRjvAII2SY8RVLFGDrxquM="
   },
   "flake_metadata": {}
 }
