@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cargo_lock_sha256": "6acfc892b745f724396758369ce896a364e2125ffb501e6e35a4b6126b481c74",
+  "cargo_lock_sha256": "45851305fadcc3ba2e584960a13f88befd9f6e2c524352eef77eebaca4839c60",
   "target_resolves": {
     "base": {
       "adler2-2.0.1": {
@@ -4161,7 +4161,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "hanabi-bff-1.0.3": {
+      "hanabi-bff-1.0.4": {
         "runtime_dependencies": [
           {
             "name": "aes_gcm",
@@ -5437,7 +5437,7 @@
           },
           {
             "name": "socket2",
-            "package_key": "socket2-0.5.10",
+            "package_key": "socket2-0.6.4",
             "kind": "normal",
             "features": [
               "all"
@@ -7755,7 +7755,7 @@
           },
           {
             "name": "socket2",
-            "package_key": "socket2-0.5.10",
+            "package_key": "socket2-0.6.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -7957,7 +7957,7 @@
           },
           {
             "name": "socket2",
-            "package_key": "socket2-0.5.10",
+            "package_key": "socket2-0.6.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -10693,9 +10693,7 @@
           }
         ],
         "build_dependencies": [],
-        "features": [
-          "all"
-        ]
+        "features": []
       },
       "socket2-0.6.4": {
         "runtime_dependencies": [
@@ -19023,15 +19021,6 @@
       "edition": "2018",
       "build_script": "build.rs"
     },
-    "core-foundation-0.9.4": {
-      "edition": "2018"
-    },
-    "core-foundation-0.10.1": {
-      "edition": "2021"
-    },
-    "core-foundation-sys-0.8.7": {
-      "edition": "2018"
-    },
     "countme-3.0.1": {
       "edition": "2018"
     },
@@ -19065,6 +19054,10 @@
     "curve25519-dalek-4.1.3": {
       "edition": "2021",
       "build_script": "build.rs"
+    },
+    "curve25519-dalek-derive-0.1.1": {
+      "edition": "2021",
+      "proc_macro": true
     },
     "darling-0.23.0": {
       "edition": "2021"
@@ -19232,7 +19225,7 @@
     "h2-0.4.14": {
       "edition": "2021"
     },
-    "hanabi-bff-1.0.3": {
+    "hanabi-bff-1.0.4": {
       "edition": "2021",
       "lib_target": {
         "name": "hanabi",
@@ -19364,6 +19357,12 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
+    "linux-raw-sys-0.4.15": {
+      "edition": "2021"
+    },
+    "linux-raw-sys-0.12.1": {
+      "edition": "2021"
+    },
     "litemap-0.8.2": {
       "edition": "2021"
     },
@@ -19469,17 +19468,17 @@
     "num_cpus-1.17.0": {
       "edition": "2015"
     },
-    "objc2-core-foundation-0.3.2": {
-      "edition": "2021"
-    },
-    "objc2-io-kit-0.3.2": {
-      "edition": "2021"
-    },
     "once_cell-1.21.4": {
       "edition": "2021"
     },
     "opaque-debug-0.3.1": {
       "edition": "2018"
+    },
+    "openssl-probe-0.1.6": {
+      "edition": "2021"
+    },
+    "openssl-probe-0.2.1": {
+      "edition": "2021"
     },
     "option-ext-0.2.0": {
       "edition": "2015"
@@ -19544,6 +19543,13 @@
     "proc-macro2-1.0.106": {
       "edition": "2021",
       "build_script": "build.rs"
+    },
+    "procfs-0.16.0": {
+      "edition": "2018",
+      "build_script": "build.rs"
+    },
+    "procfs-core-0.16.0": {
+      "edition": "2018"
     },
     "prometheus-0.13.4": {
       "edition": "2018",
@@ -19611,6 +19617,15 @@
     "rand_xorshift-0.4.0": {
       "edition": "2021"
     },
+    "raw-cpuid-11.6.0": {
+      "edition": "2018",
+      "binaries": [
+        {
+          "name": "cpuid",
+          "path": "src/bin/cpuid.rs"
+        }
+      ]
+    },
     "redis-0.27.6": {
       "edition": "2021"
     },
@@ -19675,6 +19690,10 @@
     "rustc_version-0.4.1": {
       "edition": "2018"
     },
+    "rustix-0.38.44": {
+      "edition": "2021",
+      "build_script": "build.rs"
+    },
     "rustix-1.1.4": {
       "edition": "2021",
       "build_script": "build.rs"
@@ -19728,15 +19747,6 @@
     },
     "scopeguard-1.2.0": {
       "edition": "2015"
-    },
-    "security-framework-2.11.1": {
-      "edition": "2021"
-    },
-    "security-framework-3.7.0": {
-      "edition": "2024"
-    },
-    "security-framework-sys-2.17.0": {
-      "edition": "2021"
     },
     "semver-1.0.28": {
       "edition": "2021"
@@ -20133,45 +20143,33 @@
       "edition": "2021",
       "build_script": "build.rs"
     },
-    "curve25519-dalek-derive-0.1.1": {
-      "edition": "2021",
-      "proc_macro": true
-    },
-    "raw-cpuid-11.6.0": {
-      "edition": "2018",
-      "binaries": [
-        {
-          "name": "cpuid",
-          "path": "src/bin/cpuid.rs"
-        }
-      ]
-    },
-    "linux-raw-sys-0.4.15": {
-      "edition": "2021"
-    },
-    "linux-raw-sys-0.12.1": {
-      "edition": "2021"
-    },
-    "openssl-probe-0.1.6": {
-      "edition": "2021"
-    },
-    "openssl-probe-0.2.1": {
-      "edition": "2021"
-    },
-    "procfs-0.16.0": {
-      "edition": "2018",
-      "build_script": "build.rs"
-    },
-    "procfs-core-0.16.0": {
+    "core-foundation-0.9.4": {
       "edition": "2018"
     },
-    "rustix-0.38.44": {
-      "edition": "2021",
-      "build_script": "build.rs"
+    "core-foundation-0.10.1": {
+      "edition": "2021"
+    },
+    "core-foundation-sys-0.8.7": {
+      "edition": "2018"
+    },
+    "objc2-core-foundation-0.3.2": {
+      "edition": "2021"
+    },
+    "objc2-io-kit-0.3.2": {
+      "edition": "2021"
+    },
+    "security-framework-2.11.1": {
+      "edition": "2021"
+    },
+    "security-framework-3.7.0": {
+      "edition": "2024"
+    },
+    "security-framework-sys-2.17.0": {
+      "edition": "2021"
     }
   },
   "git_nar_sha256": {
-    "tsunagu-0.1.1": "sha256-8UPUik/y+a/KuxJ3cQ3bdVsj9pJVoAgMp4TQ0xpa13Y="
+    "tsunagu-0.1.1": "sha256-CqyCfnCRmRn5ivDJFDADY4bqkyF6wGsgABD+U/qwXy0="
   },
   "flake_metadata": {}
 }
