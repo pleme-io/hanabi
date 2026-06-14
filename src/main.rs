@@ -18,6 +18,7 @@ mod auth;
 mod bff;
 mod builder;
 mod config;
+mod degraded;
 mod error;
 mod federation;
 mod handlers;
@@ -53,7 +54,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("=== Web Server (Pure Rust Stack) ===");
     info!("Version: {}", env!("CARGO_PKG_VERSION"));
 
-    let config = Arc::new(AppConfig::load()?);
+    // RESILIENCE: a bad/missing config must NOT CrashLoop the pod. Fall back to a
+    // minimal config (sane bind ports) and carry the reason into degraded mode so
+    // the failure is served explicitly instead of forcing a log investigation.
+    let (config, startup_reason): (Arc<AppConfig>, Option<String>) = match AppConfig::load() {
+        Ok(c) => (Arc::new(c), None),
+        Err(e) => {
+            warn!("Config load failed: {e} — starting in DEGRADED mode");
+            (
+                Arc::new(degraded_fallback_config()),
+                Some(format!("Configuration load failed: {e}")),
+            )
+        }
+    };
 
     let runtime = if config.server.worker_threads > 0 {
         tokio::runtime::Builder::new_multi_thread()
@@ -68,29 +81,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .build()?
     };
 
-    runtime.block_on(async_main(config))
+    runtime.block_on(async_main(config, startup_reason))
 }
 
-async fn async_main(config: Arc<AppConfig>) -> Result<(), Box<dyn std::error::Error>> {
+/// A minimal, always-valid config used only when the real config fails to load,
+/// so the degraded server can still bind reachable, scrapeable ports.
+fn degraded_fallback_config() -> AppConfig {
+    let mut c: AppConfig = serde_yaml::from_str("{}")
+        .expect("an empty YAML document must deserialize into a defaulted AppConfig");
+    if c.server.http_port == 0 {
+        c.server.http_port = 8081;
+    }
+    if c.server.health_port == 0 {
+        c.server.health_port = 8080;
+    }
+    if c.server.bind_address.is_empty() {
+        c.server.bind_address = "0.0.0.0".to_string();
+    }
+    if c.server.service_name.is_empty() {
+        c.server.service_name =
+            std::env::var("SERVICE_NAME").unwrap_or_else(|_| "hanabi".to_string());
+    }
+    c
+}
+
+async fn async_main(
+    config: Arc<AppConfig>,
+    startup_reason: Option<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     server::init_logging(&config);
 
     info!("=== {} (Pure Rust Stack) ===", config.server.service_name);
     info!("Version: {}", env!("CARGO_PKG_VERSION"));
 
+    // RESILIENCE: collect any startup-failure reason instead of exiting. A
+    // misconfigured hanabi binds its ports and serves an explicit error page
+    // (see `degraded`) rather than CrashLooping invisibly — the failure reason
+    // is visible in the browser, in `curl`, and on /health/ready + /metrics.
+    let mut startup_failure = startup_reason;
+
     // Download webapp(s) from S3 sources if configured (before preflight checks)
-    for source in &config.server.webapp_sources {
-        if let Err(e) = download_webapp_from_s3(source).await {
-            tracing::error!(
-                "Failed to download webapp '{}' from S3: {}",
-                source.display_name(),
-                e
-            );
-            std::process::exit(1);
+    if startup_failure.is_none() {
+        for source in &config.server.webapp_sources {
+            if let Err(e) = download_webapp_from_s3(source).await {
+                startup_failure = Some(format!(
+                    "Failed to download webapp '{}' from S3: {}",
+                    source.display_name(),
+                    e
+                ));
+                break;
+            }
         }
     }
 
-    if let Err(e) = PreflightChecks::run_all(&config) {
-        tracing::error!("Preflight checks failed: {}", e);
+    // Preflight checks (static assets present, optional React-bundle integrity).
+    if startup_failure.is_none() {
+        if let Err(e) = PreflightChecks::run_all(&config) {
+            startup_failure = Some(format!("Preflight checks failed: {}", e));
+        }
+    }
+
+    // If anything failed, notify + enter degraded mode (bind ports, serve the
+    // explicit reason). Never exit(1) / CrashLoop.
+    if let Some(reason) = startup_failure {
+        tracing::error!("{reason}");
 
         let notifier = NotificationClient::from_env(&config.server.service_name);
         let pod_identity = PodIdentity::from_env();
@@ -108,9 +162,9 @@ async fn async_main(config: Arc<AppConfig>) -> Result<(), Box<dyn std::error::Er
                 .unwrap_or_else(|_| "unknown".to_string()),
             total_duration: std::time::Duration::ZERO,
             phases: vec![StartupPhase {
-                name: "preflight".into(),
+                name: "startup".into(),
                 duration: std::time::Duration::ZERO,
-                status: PhaseStatus::Failed(e.to_string()),
+                status: PhaseStatus::Failed(reason.clone()),
                 detail: None,
             }],
             dependency_status: DependencyStatus::default(),
@@ -118,10 +172,10 @@ async fn async_main(config: Arc<AppConfig>) -> Result<(), Box<dyn std::error::Er
             git_sha: std::env::var("GIT_SHA").unwrap_or_else(|_| "unknown".to_string()),
             run_mode: "bff".to_string(),
         };
-        notifier.notify_startup_failure(&report, &e.to_string());
+        notifier.notify_startup_failure(&report, &reason);
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-        std::process::exit(1);
+        return degraded::run_degraded(&config, reason).await;
     }
 
     #[allow(unused_mut)]
