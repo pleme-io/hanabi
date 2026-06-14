@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "cargo_lock_sha256": "45851305fadcc3ba2e584960a13f88befd9f6e2c524352eef77eebaca4839c60",
+  "cargo_lock_sha256": "385dfd52a3681d7adaacc8bd853cf4846c46c3ae49766f4c07c5466938499f2f",
   "target_resolves": {
     "base": {
       "adler2-2.0.1": {
@@ -182,7 +182,7 @@
           },
           {
             "name": "zerocopy",
-            "package_key": "zerocopy-0.8.50",
+            "package_key": "zerocopy-0.8.52",
             "kind": "normal",
             "features": [
               "simd"
@@ -216,7 +216,7 @@
         "runtime_dependencies": [
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -236,7 +236,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "alloc-stdlib-0.2.2": {
+      "alloc-stdlib-0.2.4": {
         "runtime_dependencies": [
           {
             "name": "alloc_no_stdlib",
@@ -256,7 +256,7 @@
         "runtime_dependencies": [
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -462,7 +462,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -532,7 +532,7 @@
           },
           {
             "name": "regex",
-            "package_key": "regex-1.12.3",
+            "package_key": "regex-1.12.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -634,7 +634,7 @@
           },
           {
             "name": "time",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [
               "parsing",
@@ -800,7 +800,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -852,7 +852,7 @@
           },
           {
             "name": "time",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [
               "serde",
@@ -947,7 +947,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1017,7 +1017,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1241,7 +1241,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1413,7 +1413,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1581,7 +1581,7 @@
           "std"
         ]
       },
-      "bitflags-2.12.1": {
+      "bitflags-2.13.0": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -1604,7 +1604,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "brotli-8.0.3": {
+      "brotli-8.0.4": {
         "runtime_dependencies": [
           {
             "name": "alloc_no_stdlib",
@@ -1618,7 +1618,7 @@
           },
           {
             "name": "alloc_stdlib",
-            "package_key": "alloc-stdlib-0.2.2",
+            "package_key": "alloc-stdlib-0.2.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1628,7 +1628,7 @@
           },
           {
             "name": "brotli_decompressor",
-            "package_key": "brotli-decompressor-5.0.1",
+            "package_key": "brotli-decompressor-5.0.3",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1644,7 +1644,7 @@
           "std"
         ]
       },
-      "brotli-decompressor-5.0.1": {
+      "brotli-decompressor-5.0.3": {
         "runtime_dependencies": [
           {
             "name": "alloc_no_stdlib",
@@ -1658,7 +1658,7 @@
           },
           {
             "name": "alloc_stdlib",
-            "package_key": "alloc-stdlib-0.2.2",
+            "package_key": "alloc-stdlib-0.2.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1731,7 +1731,7 @@
           "std"
         ]
       },
-      "cc-1.2.63": {
+      "cc-1.2.64": {
         "runtime_dependencies": [
           {
             "name": "find_msvc_tools",
@@ -1767,7 +1767,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "chrono-0.4.44": {
+      "chrono-0.4.45": {
         "runtime_dependencies": [
           {
             "name": "iana_time_zone",
@@ -1867,7 +1867,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -1923,7 +1923,7 @@
         "runtime_dependencies": [
           {
             "name": "brotli",
-            "package_key": "brotli-8.0.3",
+            "package_key": "brotli-8.0.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -1953,7 +1953,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -2067,7 +2067,7 @@
           },
           {
             "name": "time",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [
               "std",
@@ -2574,7 +2574,7 @@
           },
           {
             "name": "zeroize",
-            "package_key": "zeroize-1.8.2",
+            "package_key": "zeroize-1.9.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -2595,16 +2595,6 @@
       "deranged-0.5.8": {
         "runtime_dependencies": [
           {
-            "name": "powerfmt",
-            "package_key": "powerfmt-0.2.0",
-            "kind": "normal",
-            "features": [],
-            "uses_default_features": false,
-            "optional": true,
-            "target": null,
-            "tree": "target"
-          },
-          {
             "name": "serde_core",
             "package_key": "serde_core-1.0.228",
             "kind": "normal",
@@ -2618,7 +2608,6 @@
         "build_dependencies": [],
         "features": [
           "default",
-          "powerfmt",
           "serde"
         ]
       },
@@ -3477,7 +3466,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -3910,7 +3899,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4007,7 +3996,7 @@
           },
           {
             "name": "serde_with",
-            "package_key": "serde_with-3.20.0",
+            "package_key": "serde_with-3.21.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4093,7 +4082,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4161,7 +4150,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "hanabi-bff-1.0.4": {
+      "hanabi-bff-1.0.5": {
         "runtime_dependencies": [
           {
             "name": "aes_gcm",
@@ -4247,7 +4236,7 @@
           },
           {
             "name": "chrono",
-            "package_key": "chrono-0.4.44",
+            "package_key": "chrono-0.4.45",
             "kind": "normal",
             "features": [
               "serde"
@@ -4319,7 +4308,7 @@
           },
           {
             "name": "hive_router_query_planner",
-            "package_key": "hive-router-query-planner-2.8.4",
+            "package_key": "hive-router-query-planner-2.8.5",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4339,7 +4328,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4489,7 +4478,7 @@
           },
           {
             "name": "regex",
-            "package_key": "regex-1.12.3",
+            "package_key": "regex-1.12.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4564,7 +4553,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4614,7 +4603,7 @@
           },
           {
             "name": "time",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4710,7 +4699,7 @@
           },
           {
             "name": "tsunagu",
-            "package_key": "tsunagu-0.1.1",
+            "package_key": "tsunagu-0.1.1-0e1b3a99d5a91925e288bd4ccf36b03b64cbd002",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4730,7 +4719,7 @@
           },
           {
             "name": "uuid",
-            "package_key": "uuid-1.23.2",
+            "package_key": "uuid-1.23.3",
             "kind": "normal",
             "features": [
               "v4",
@@ -4801,11 +4790,11 @@
           "std"
         ]
       },
-      "hive-router-query-planner-2.8.4": {
+      "hive-router-query-planner-2.8.5": {
         "runtime_dependencies": [
           {
             "name": "bitflags",
-            "package_key": "bitflags-2.12.1",
+            "package_key": "bitflags-2.13.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -4942,7 +4931,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "http-1.4.1": {
+      "http-1.4.2": {
         "runtime_dependencies": [
           {
             "name": "bytes",
@@ -4985,7 +4974,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5021,7 +5010,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5127,7 +5116,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5187,7 +5176,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [
               "const_generics",
@@ -5235,7 +5224,7 @@
         "runtime_dependencies": [
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5367,7 +5356,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -5529,7 +5518,7 @@
           },
           {
             "name": "yoke",
-            "package_key": "yoke-0.8.2",
+            "package_key": "yoke-0.8.3",
             "kind": "normal",
             "features": [
               "derive"
@@ -5670,7 +5659,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -5814,7 +5803,7 @@
           },
           {
             "name": "yoke",
-            "package_key": "yoke-0.8.2",
+            "package_key": "yoke-0.8.3",
             "kind": "normal",
             "features": [
               "derive"
@@ -5883,7 +5872,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [
               "const_generics"
@@ -6201,7 +6190,7 @@
           "default"
         ]
       },
-      "log-0.4.31": {
+      "log-0.4.32": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -6285,7 +6274,7 @@
           "std"
         ]
       },
-      "memchr-2.8.1": {
+      "memchr-2.8.2": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -6483,7 +6472,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -6503,7 +6492,7 @@
           },
           {
             "name": "uuid",
-            "package_key": "uuid-1.23.2",
+            "package_key": "uuid-1.23.3",
             "kind": "normal",
             "features": [
               "v4"
@@ -6554,7 +6543,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -6574,7 +6563,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -6683,7 +6672,7 @@
         "runtime_dependencies": [
           {
             "name": "bitflags",
-            "package_key": "bitflags-2.12.1",
+            "package_key": "bitflags-2.13.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -6766,7 +6755,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -7036,7 +7025,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -7261,7 +7250,7 @@
         "runtime_dependencies": [
           {
             "name": "chrono",
-            "package_key": "chrono-0.4.44",
+            "package_key": "chrono-0.4.45",
             "kind": "normal",
             "features": [
               "serde"
@@ -7419,7 +7408,7 @@
         "runtime_dependencies": [
           {
             "name": "zerocopy",
-            "package_key": "zerocopy-0.8.50",
+            "package_key": "zerocopy-0.8.52",
             "kind": "normal",
             "features": [
               "simd"
@@ -7479,7 +7468,7 @@
           },
           {
             "name": "bitflags",
-            "package_key": "bitflags-2.12.1",
+            "package_key": "bitflags-2.13.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -7531,7 +7520,7 @@
           },
           {
             "name": "regex_syntax",
-            "package_key": "regex-syntax-0.8.10",
+            "package_key": "regex-syntax-0.8.11",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -7661,7 +7650,7 @@
         "runtime_dependencies": [
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -8487,7 +8476,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "regex-1.12.3": {
+      "regex-1.12.4": {
         "runtime_dependencies": [
           {
             "name": "aho_corasick",
@@ -8501,7 +8490,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -8521,7 +8510,7 @@
           },
           {
             "name": "regex_syntax",
-            "package_key": "regex-syntax-0.8.10",
+            "package_key": "regex-syntax-0.8.11",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -8565,7 +8554,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -8575,7 +8564,7 @@
           },
           {
             "name": "regex_syntax",
-            "package_key": "regex-syntax-0.8.10",
+            "package_key": "regex-syntax-0.8.11",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -8612,7 +8601,7 @@
           "unicode-word-boundary"
         ]
       },
-      "regex-syntax-0.8.10": {
+      "regex-syntax-0.8.11": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -8677,7 +8666,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -8740,7 +8729,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -9050,7 +9039,7 @@
           },
           {
             "name": "uuid_1",
-            "package_key": "uuid-1.23.2",
+            "package_key": "uuid-1.23.3",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -9279,7 +9268,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -9289,7 +9278,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -9411,7 +9400,7 @@
           },
           {
             "name": "time",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [
               "formatting",
@@ -9557,7 +9546,7 @@
           },
           {
             "name": "zeroize",
-            "package_key": "zeroize-1.8.2",
+            "package_key": "zeroize-1.9.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -9596,7 +9585,7 @@
         "runtime_dependencies": [
           {
             "name": "zeroize",
-            "package_key": "zeroize-1.8.2",
+            "package_key": "zeroize-1.9.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -9976,7 +9965,7 @@
           },
           {
             "name": "memchr",
-            "package_key": "memchr-2.8.1",
+            "package_key": "memchr-2.8.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -10139,7 +10128,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "serde_with-3.20.0": {
+      "serde_with-3.21.0": {
         "runtime_dependencies": [
           {
             "name": "base64",
@@ -10163,7 +10152,7 @@
           },
           {
             "name": "chrono_0_4",
-            "package_key": "chrono-0.4.44",
+            "package_key": "chrono-0.4.45",
             "kind": "normal",
             "features": [
               "serde"
@@ -10251,7 +10240,7 @@
           },
           {
             "name": "serde_with_macros",
-            "package_key": "serde_with_macros-3.20.0",
+            "package_key": "serde_with_macros-3.21.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -10261,7 +10250,7 @@
           },
           {
             "name": "time_0_3",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -10278,7 +10267,7 @@
           "std"
         ]
       },
-      "serde_with_macros-3.20.0": {
+      "serde_with_macros-3.21.0": {
         "runtime_dependencies": [
           {
             "name": "darling",
@@ -10554,7 +10543,7 @@
           },
           {
             "name": "zeroize",
-            "package_key": "zeroize-1.8.2",
+            "package_key": "zeroize-1.9.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -10647,7 +10636,7 @@
           },
           {
             "name": "time",
-            "package_key": "time-0.3.47",
+            "package_key": "time-0.3.49",
             "kind": "normal",
             "features": [
               "formatting",
@@ -10671,7 +10660,7 @@
           "std"
         ]
       },
-      "smallvec-1.15.1": {
+      "smallvec-1.15.2": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -11088,7 +11077,7 @@
         "build_dependencies": [
           {
             "name": "cc",
-            "package_key": "cc-1.2.63",
+            "package_key": "cc-1.2.64",
             "kind": "build",
             "features": [],
             "uses_default_features": true,
@@ -11324,27 +11313,15 @@
         "build_dependencies": [],
         "features": []
       },
-      "time-0.3.47": {
+      "time-0.3.49": {
         "runtime_dependencies": [
           {
             "name": "deranged",
             "package_key": "deranged-0.5.8",
             "kind": "normal",
-            "features": [
-              "powerfmt"
-            ],
-            "uses_default_features": true,
-            "optional": false,
-            "target": null,
-            "tree": "target"
-          },
-          {
-            "name": "itoa",
-            "package_key": "itoa-1.0.18",
-            "kind": "normal",
             "features": [],
             "uses_default_features": true,
-            "optional": true,
+            "optional": false,
             "target": null,
             "tree": "target"
           },
@@ -11380,7 +11357,7 @@
           },
           {
             "name": "time_core",
-            "package_key": "time-core-0.1.8",
+            "package_key": "time-core-0.1.9",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -11390,7 +11367,7 @@
           },
           {
             "name": "time_macros",
-            "package_key": "time-macros-0.2.27",
+            "package_key": "time-macros-0.2.29",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -11411,12 +11388,12 @@
           "std"
         ]
       },
-      "time-core-0.1.8": {
+      "time-core-0.1.9": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": []
       },
-      "time-macros-0.2.27": {
+      "time-macros-0.2.29": {
         "runtime_dependencies": [
           {
             "name": "num_conv",
@@ -11430,7 +11407,7 @@
           },
           {
             "name": "time_core",
-            "package_key": "time-core-0.1.8",
+            "package_key": "time-core-0.1.9",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -11826,7 +11803,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -11925,7 +11902,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12082,7 +12059,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [
               "std"
@@ -12412,7 +12389,7 @@
           },
           {
             "name": "bitflags",
-            "package_key": "bitflags-2.12.1",
+            "package_key": "bitflags-2.13.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12452,7 +12429,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12621,7 +12598,7 @@
         "runtime_dependencies": [
           {
             "name": "bitflags",
-            "package_key": "bitflags-2.12.1",
+            "package_key": "bitflags-2.13.0",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12651,7 +12628,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12771,7 +12748,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12832,7 +12809,7 @@
         "runtime_dependencies": [
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -12948,7 +12925,7 @@
         "runtime_dependencies": [
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13083,7 +13060,7 @@
           },
           {
             "name": "smallvec",
-            "package_key": "smallvec-1.15.1",
+            "package_key": "smallvec-1.15.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13202,7 +13179,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "tsunagu-0.1.1": {
+      "tsunagu-0.1.1-0e1b3a99d5a91925e288bd4ccf36b03b64cbd002": {
         "runtime_dependencies": [
           {
             "name": "dirs",
@@ -13314,7 +13291,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13334,7 +13311,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13451,7 +13428,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13471,7 +13448,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13654,7 +13631,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "uuid-1.23.2": {
+      "uuid-1.23.3": {
         "runtime_dependencies": [
           {
             "name": "getrandom",
@@ -13783,7 +13760,7 @@
           },
           {
             "name": "http",
-            "package_key": "http-1.4.1",
+            "package_key": "http-1.4.2",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13825,7 +13802,7 @@
           },
           {
             "name": "log",
-            "package_key": "log-0.4.31",
+            "package_key": "log-0.4.32",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13845,7 +13822,7 @@
           },
           {
             "name": "regex",
-            "package_key": "regex-1.12.3",
+            "package_key": "regex-1.12.4",
             "kind": "normal",
             "features": [],
             "uses_default_features": true,
@@ -13935,7 +13912,7 @@
           "xxh3"
         ]
       },
-      "yoke-0.8.2": {
+      "yoke-0.8.3": {
         "runtime_dependencies": [
           {
             "name": "stable_deref_trait",
@@ -14022,7 +13999,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zerocopy-0.8.50": {
+      "zerocopy-0.8.52": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -14095,7 +14072,7 @@
         "build_dependencies": [],
         "features": []
       },
-      "zeroize-1.8.2": {
+      "zeroize-1.9.0": {
         "runtime_dependencies": [],
         "build_dependencies": [],
         "features": [
@@ -14117,7 +14094,7 @@
           },
           {
             "name": "yoke",
-            "package_key": "yoke-0.8.2",
+            "package_key": "yoke-0.8.3",
             "kind": "normal",
             "features": [
               "derive"
@@ -14148,7 +14125,7 @@
         "runtime_dependencies": [
           {
             "name": "yoke",
-            "package_key": "yoke-0.8.2",
+            "package_key": "yoke-0.8.3",
             "kind": "normal",
             "features": [],
             "uses_default_features": false,
@@ -14413,7 +14390,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [
                   "std"
@@ -14517,7 +14494,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -14660,7 +14637,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.63",
+                "package_key": "cc-1.2.64",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -14681,7 +14658,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -14814,7 +14791,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -14876,7 +14853,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -14978,7 +14955,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -15224,7 +15201,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [
                   "std"
@@ -15328,7 +15305,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -15439,7 +15416,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -15487,7 +15464,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.63",
+                "package_key": "cc-1.2.64",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -15508,7 +15485,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -15641,7 +15618,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -15703,7 +15680,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -15805,7 +15782,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -16009,7 +15986,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -16071,7 +16048,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -16137,7 +16114,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -16258,7 +16235,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -16306,7 +16283,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.63",
+                "package_key": "cc-1.2.64",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -16327,7 +16304,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -16424,7 +16401,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -16587,7 +16564,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -16771,7 +16748,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -16833,7 +16810,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -16899,7 +16876,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -17020,7 +16997,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -17068,7 +17045,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.63",
+                "package_key": "cc-1.2.64",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -17089,7 +17066,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -17186,7 +17163,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -17349,7 +17326,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -17516,7 +17493,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -17578,7 +17555,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -17644,7 +17621,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -17797,7 +17774,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.63",
+                "package_key": "cc-1.2.64",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -17818,7 +17795,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -17915,7 +17892,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -18078,7 +18055,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -18245,7 +18222,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -18307,7 +18284,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -18373,7 +18350,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -18526,7 +18503,7 @@
             "build_dependencies": [
               {
                 "name": "cc",
-                "package_key": "cc-1.2.63",
+                "package_key": "cc-1.2.64",
                 "kind": "build",
                 "features": [],
                 "uses_default_features": false,
@@ -18547,7 +18524,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -18644,7 +18621,7 @@
             "runtime_dependencies": [
               {
                 "name": "bitflags",
-                "package_key": "bitflags-2.12.1",
+                "package_key": "bitflags-2.13.0",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": false,
@@ -18807,7 +18784,7 @@
               },
               {
                 "name": "memchr",
-                "package_key": "memchr-2.8.1",
+                "package_key": "memchr-2.8.2",
                 "kind": "normal",
                 "features": [],
                 "uses_default_features": true,
@@ -18862,7 +18839,7 @@
         }
       ]
     },
-    "alloc-stdlib-0.2.2": {
+    "alloc-stdlib-0.2.4": {
       "edition": "2015",
       "binaries": [
         {
@@ -18940,13 +18917,13 @@
     "bit-vec-0.8.0": {
       "edition": "2015"
     },
-    "bitflags-2.12.1": {
+    "bitflags-2.13.0": {
       "edition": "2021"
     },
     "block-buffer-0.10.4": {
       "edition": "2018"
     },
-    "brotli-8.0.3": {
+    "brotli-8.0.4": {
       "edition": "2015",
       "binaries": [
         {
@@ -18959,7 +18936,7 @@
         }
       ]
     },
-    "brotli-decompressor-5.0.1": {
+    "brotli-decompressor-5.0.3": {
       "edition": "2015",
       "binaries": [
         {
@@ -18980,7 +18957,7 @@
     "bytes-1.11.1": {
       "edition": "2021"
     },
-    "cc-1.2.63": {
+    "cc-1.2.64": {
       "edition": "2018"
     },
     "cfg-if-1.0.4": {
@@ -18989,7 +18966,7 @@
     "cfg_aliases-0.2.1": {
       "edition": "2018"
     },
-    "chrono-0.4.44": {
+    "chrono-0.4.45": {
       "edition": "2021"
     },
     "cipher-0.4.4": {
@@ -19225,7 +19202,7 @@
     "h2-0.4.14": {
       "edition": "2021"
     },
-    "hanabi-bff-1.0.4": {
+    "hanabi-bff-1.0.5": {
       "edition": "2021",
       "lib_target": {
         "name": "hanabi",
@@ -19253,7 +19230,7 @@
     "hex-0.4.3": {
       "edition": "2018"
     },
-    "hive-router-query-planner-2.8.4": {
+    "hive-router-query-planner-2.8.5": {
       "edition": "2021"
     },
     "hmac-0.12.1": {
@@ -19262,7 +19239,7 @@
     "home-0.5.12": {
       "edition": "2024"
     },
-    "http-1.4.1": {
+    "http-1.4.2": {
       "edition": "2021"
     },
     "http-body-1.0.1": {
@@ -19369,7 +19346,7 @@
     "lock_api-0.4.14": {
       "edition": "2021"
     },
-    "log-0.4.31": {
+    "log-0.4.32": {
       "edition": "2021"
     },
     "lru-slab-0.1.2": {
@@ -19388,7 +19365,7 @@
     "md5-0.8.0": {
       "edition": "2021"
     },
-    "memchr-2.8.1": {
+    "memchr-2.8.2": {
       "edition": "2021"
     },
     "mime-0.3.17": {
@@ -19637,13 +19614,13 @@
       "edition": "2021",
       "proc_macro": true
     },
-    "regex-1.12.3": {
+    "regex-1.12.4": {
       "edition": "2021"
     },
     "regex-automata-0.4.14": {
       "edition": "2021"
     },
-    "regex-syntax-0.8.10": {
+    "regex-syntax-0.8.11": {
       "edition": "2021"
     },
     "rend-0.5.3": {
@@ -19780,10 +19757,10 @@
     "serde_urlencoded-0.7.1": {
       "edition": "2018"
     },
-    "serde_with-3.20.0": {
+    "serde_with-3.21.0": {
       "edition": "2021"
     },
-    "serde_with_macros-3.20.0": {
+    "serde_with_macros-3.21.0": {
       "edition": "2021",
       "proc_macro": true
     },
@@ -19826,7 +19803,7 @@
     "slab-0.4.12": {
       "edition": "2018"
     },
-    "smallvec-1.15.1": {
+    "smallvec-1.15.2": {
       "edition": "2018"
     },
     "socket2-0.5.10": {
@@ -19914,13 +19891,13 @@
     "thread_local-1.1.9": {
       "edition": "2021"
     },
-    "time-0.3.47": {
+    "time-0.3.49": {
       "edition": "2024"
     },
-    "time-core-0.1.8": {
+    "time-core-0.1.9": {
       "edition": "2024"
     },
-    "time-macros-0.2.27": {
+    "time-macros-0.2.29": {
       "edition": "2024",
       "proc_macro": true
     },
@@ -20011,7 +19988,7 @@
     "tryhard-0.5.2": {
       "edition": "2018"
     },
-    "tsunagu-0.1.1": {
+    "tsunagu-0.1.1-0e1b3a99d5a91925e288bd4ccf36b03b64cbd002": {
       "edition": "2024"
     },
     "tungstenite-0.23.0": {
@@ -20067,7 +20044,7 @@
     "utf8_iter-1.0.4": {
       "edition": "2021"
     },
-    "uuid-1.23.2": {
+    "uuid-1.23.3": {
       "edition": "2021"
     },
     "version_check-0.9.5": {
@@ -20108,14 +20085,14 @@
     "xxhash-rust-0.8.15": {
       "edition": "2018"
     },
-    "yoke-0.8.2": {
+    "yoke-0.8.3": {
       "edition": "2021"
     },
     "yoke-derive-0.8.2": {
       "edition": "2021",
       "proc_macro": true
     },
-    "zerocopy-0.8.50": {
+    "zerocopy-0.8.52": {
       "edition": "2021",
       "build_script": "build.rs"
     },
@@ -20126,8 +20103,8 @@
       "edition": "2021",
       "proc_macro": true
     },
-    "zeroize-1.8.2": {
-      "edition": "2021"
+    "zeroize-1.9.0": {
+      "edition": "2024"
     },
     "zerotrie-0.2.4": {
       "edition": "2021"
@@ -20169,7 +20146,7 @@
     }
   },
   "git_nar_sha256": {
-    "tsunagu-0.1.1": "sha256-CqyCfnCRmRn5ivDJFDADY4bqkyF6wGsgABD+U/qwXy0="
+    "tsunagu-0.1.1-0e1b3a99d5a91925e288bd4ccf36b03b64cbd002": "sha256-0fgRg/6uNcA0DXRc9xNMejjZLHqDu06ERVoOugm5XTA="
   },
   "flake_metadata": {}
 }
