@@ -35,7 +35,12 @@ jobs:
     with:
       imageAttr: dockerImage-amd64
       imageName: pleme-io/hanabi
-      tag: amd64-${{ github.sha }}
+      # AUTOBUMP-friendly: `r<run_number>` makes the tag numerically SORTABLE so
+      # Flux ImagePolicy (the env-subscription side) can auto-track the latest
+      # build; the sha keeps it traceable. (Same shape as pangea-operator.)
+      # Subscribing environments auto-deploy this stream; official semver
+      # releases are cut from it on a v* tag when desired.
+      tag: amd64-r${{ github.run_number }}-${{ github.sha }}
       additionalTags: amd64-latest
       runner: rio-builder
     secrets: inherit
