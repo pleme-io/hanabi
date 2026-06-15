@@ -258,20 +258,30 @@ async fn download_webapp_from_s3(
         endpoint: source.endpoint.clone(),
     };
 
-    let access_key = source.get_access_key().ok_or_else(|| {
-        format!(
-            "S3 access key not configured for webapp source '{}' (set access_key or access_key_env)",
-            source.display_name()
-        )
-    })?;
-    let secret_key = source.get_secret_key().ok_or_else(|| {
-        format!(
-            "S3 secret key not configured for webapp source '{}' (set secret_key or secret_key_env)",
-            source.display_name()
-        )
-    })?;
-
-    let credentials = Credentials::new(Some(&access_key), Some(&secret_key), None, None, None)?;
+    // Credentials are OPTIONAL. When no access key is configured, pull
+    // anonymously — the case for an internal-network S3 endpoint whose data
+    // plane needs no SigV4 (e.g. armázem M0, the pleme-io any-storage→S3
+    // gateway, reached over a ClusterIP Service + NetworkPolicy). When a key
+    // IS configured, authenticate normally (MinIO/RustFS/Garage with creds).
+    let credentials = match (source.get_access_key(), source.get_secret_key()) {
+        (Some(access_key), Some(secret_key)) => {
+            Credentials::new(Some(&access_key), Some(&secret_key), None, None, None)?
+        }
+        (None, None) => {
+            info!(
+                "No S3 credentials configured for webapp source '{}' — pulling anonymously",
+                source.display_name()
+            );
+            Credentials::anonymous()?
+        }
+        _ => {
+            return Err(format!(
+                "S3 credentials half-configured for webapp source '{}' — set BOTH access and secret key, or NEITHER (anonymous)",
+                source.display_name()
+            )
+            .into());
+        }
+    };
 
     let bucket = Bucket::new(&source.bucket, region, credentials)?;
     let bucket = if source.path_style {
