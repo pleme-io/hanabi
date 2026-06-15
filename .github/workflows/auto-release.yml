@@ -42,5 +42,8 @@ jobs:
       # releases are cut from it on a v* tag when desired.
       tag: amd64-r${{ github.run_number }}-${{ github.sha }}
       additionalTags: amd64-latest
-      runner: rio-builder
+      # rio's self-hosted x86_64 ARC scale-set was renamed rio-builder → rio-build-01
+      # (k8s commit 1739fc0, to escape a duplicate runner registration). Must match
+      # or the build queues forever waiting on a label that no longer exists.
+      runner: rio-build-01
     secrets: inherit
