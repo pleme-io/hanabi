@@ -1,23 +1,40 @@
 name: auto-release
 
-# Three-line consumer shim. Every push to main runs the pleme-io
-# substrate single-crate auto-release pipeline (bump → commit →
-# tag → push → publish-to-crates.io). The reusable workflow lives
-# at pleme-io/substrate/.github/workflows/cargo-auto-release.yml.
+# hanabi is a SERVICE whose artifact is a Nix-built `dockerTools` image —
+# NOT a crate. The correct AUTO-RELEASE (★★ org directive) for a Rust service
+# image is substrate's image-push.yml, building the Nix image on a NATIVE
+# x86_64 runner.
+#
+# Why this changed (root-cause fix, 2026-06-14): this workflow previously used
+# `cargo-auto-release.yml` → crates.io, which (a) failed every run at
+# `cargo publish` ("all dependencies must have a version specified") and, worse,
+# (b) built NO image. So the only published hanabi `amd64-*` tags were aarch64
+# binaries built off-target on the aarch64 builder — they `exec format error`
+# on x86_64 (e.g. rio), which is why hanabi-served deploys CrashLooped.
+#
+# The image job runs on the rio self-hosted x86_64 runner (`rio-builder`, the
+# same one the pangea-operator image uses) so `dockerImage-amd64` — a
+# x86_64-linux derivation (substrate/lib/build/rust/service.nix:133) — is built
+# NATIVELY into a correct amd64 binary, then pushed as `amd64-<sha>` +
+# `amd64-latest`. Pillar 8: Nix-built, no Dockerfile.
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      bump-type:
-        description: "patch | minor | major"
-        required: false
-        default: patch
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  release:
-    uses: pleme-io/substrate/.github/workflows/cargo-auto-release.yml@main
+  image-amd64:
+    name: hanabi amd64 image → ghcr.io
+    uses: pleme-io/substrate/.github/workflows/image-push.yml@main
     with:
-      bump-type: ${{ inputs.bump-type || 'patch' }}
+      imageAttr: dockerImage-amd64
+      imageName: pleme-io/hanabi
+      tag: amd64-${{ github.sha }}
+      additionalTags: amd64-latest
+      runner: rio-builder
     secrets: inherit
