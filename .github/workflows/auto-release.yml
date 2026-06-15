@@ -24,8 +24,9 @@ on:
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write
   packages: write
+  id-token: write
 
 jobs:
   image-amd64:
