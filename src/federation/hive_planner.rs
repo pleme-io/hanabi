@@ -1107,7 +1107,7 @@ mod tests {
         // Verify both subgraphs are involved
         let subgraphs: Vec<&str> = fetch_nodes
             .iter()
-            .map(|n| n.service_name.as_str())
+            .map(|n| n.as_str())
             .collect();
         assert!(
             subgraphs.contains(&"auth"),
