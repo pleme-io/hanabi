@@ -54,7 +54,7 @@ use hive_router_query_planner::{
     ast::normalization::normalize_operation,
     graph::PlannerOverrideContext,
     planner::{Planner, PlannerError},
-    utils::{cancellation::CancellationToken, parsing::{parse_schema, safe_parse_operation}},
+    utils::{cancellation::{CancellationError, CancellationToken}, parsing::{parse_schema, safe_parse_operation}},
 };
 use moka::future::Cache;
 use once_cell::sync::Lazy;
@@ -286,8 +286,14 @@ pub enum HivePlannerError {
 impl From<PlannerError> for HivePlannerError {
     fn from(err: PlannerError) -> Self {
         match err {
-            PlannerError::Cancelled => HivePlannerError::Cancelled,
-            PlannerError::Timedout => HivePlannerError::Timeout(Duration::from_secs(10)),
+            // In hive-router-query-planner 2.x cancellation/timeout surface as a single
+            // `CancellationError` variant carrying a `CancellationError::{Cancelled,TimedOut}`.
+            PlannerError::CancellationError(CancellationError::Cancelled) => {
+                HivePlannerError::Cancelled
+            }
+            PlannerError::CancellationError(CancellationError::TimedOut) => {
+                HivePlannerError::Timeout(Duration::from_secs(10))
+            }
             other => HivePlannerError::PlanningError(other.to_string()),
         }
     }
@@ -417,7 +423,7 @@ impl HivePlanner {
                     debug!(
                         operation = ?request.operation_name,
                         elapsed_ms = elapsed.as_millis(),
-                        fetch_count = plan.fetch_nodes().len(),
+                        fetch_count = Self::collect_fetch_service_names(plan).len(),
                         "Query planned successfully"
                     );
                 }
@@ -657,6 +663,59 @@ impl HivePlanner {
         Ok(Arc::new(plan))
     }
 
+    /// Collect the subgraph service names of every fetch in a Hive query plan.
+    ///
+    /// hive-router-query-planner 2.x dropped the `QueryPlan::fetch_nodes()` helper,
+    /// so we walk the plan-node tree ourselves. Every node kind that issues a
+    /// subgraph request — `Fetch`, the entity-batched `BatchFetch`, and a
+    /// subscription's `primary` fetch — contributes its `service_name`; container
+    /// nodes (`Sequence`, `Parallel`, `Flatten`, `Condition`, `Defer`) recurse.
+    /// The number of returned names is the fetch count.
+    fn collect_fetch_service_names(plan: &HiveQueryPlan) -> Vec<String> {
+        fn walk(node: &HivePlanNode, out: &mut Vec<String>) {
+            match node {
+                HivePlanNode::Fetch(fetch) => out.push(fetch.service_name.clone()),
+                HivePlanNode::BatchFetch(batch) => out.push(batch.service_name.clone()),
+                HivePlanNode::Subscription(sub) => out.push(sub.primary.service_name.clone()),
+                HivePlanNode::Sequence(seq) => {
+                    for n in &seq.nodes {
+                        walk(n, out);
+                    }
+                }
+                HivePlanNode::Parallel(par) => {
+                    for n in &par.nodes {
+                        walk(n, out);
+                    }
+                }
+                HivePlanNode::Flatten(flatten) => walk(&flatten.node, out),
+                HivePlanNode::Condition(cond) => {
+                    if let Some(if_node) = &cond.if_clause {
+                        walk(if_node, out);
+                    }
+                    if let Some(else_node) = &cond.else_clause {
+                        walk(else_node, out);
+                    }
+                }
+                HivePlanNode::Defer(defer) => {
+                    if let Some(primary_node) = &defer.primary.node {
+                        walk(primary_node, out);
+                    }
+                    for deferred in &defer.deferred {
+                        if let Some(deferred_node) = &deferred.node {
+                            walk(deferred_node, out);
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut out = Vec::new();
+        if let Some(node) = &plan.node {
+            walk(node, &mut out);
+        }
+        out
+    }
+
     /// Convert a Hive QueryPlan to our QueryPlan format
     fn convert_hive_plan(&self, hive_plan: &HiveQueryPlan) -> Result<QueryPlan, HivePlannerError> {
         let node = match &hive_plan.node {
@@ -665,54 +724,109 @@ impl HivePlanner {
         };
 
         // Count fetches and collect subgraphs
-        let fetch_nodes = hive_plan.fetch_nodes();
-        let subgraphs: Vec<String> = fetch_nodes
+        let fetch_service_names = Self::collect_fetch_service_names(hive_plan);
+        let subgraphs: Vec<String> = fetch_service_names
             .iter()
-            .map(|f| f.service_name.clone())
+            .cloned()
             .collect::<std::collections::HashSet<_>>()
             .into_iter()
             .collect();
 
         Ok(QueryPlan {
             node,
-            fetch_count: fetch_nodes.len(),
+            fetch_count: fetch_service_names.len(),
             subgraphs,
+        })
+    }
+
+    /// Convert a Hive `FetchNode` into our `PlanNode::Fetch`.
+    ///
+    /// Shared by the `Fetch` plan-node arm and the `Subscription` arm — in
+    /// hive-router-query-planner 2.x a `SubscriptionNode`'s `primary` is a
+    /// `FetchNode` directly (no longer a wrapping `PlanNode`), so both paths
+    /// funnel through this one conversion.
+    fn convert_fetch_node(
+        &self,
+        fetch: &hive_router_query_planner::planner::plan_nodes::FetchNode,
+    ) -> PlanNode {
+        let url = self
+            .subgraph_endpoints
+            .get(&fetch.service_name)
+            .cloned()
+            .unwrap_or_else(|| {
+                format!(
+                    "http://{}:{}{}",
+                    fetch.service_name,
+                    self.config.subgraph_default_port,
+                    self.config.subgraph_default_path
+                )
+            });
+
+        // Extract requires as field names if present
+        let requires: Vec<String> = fetch
+            .variable_usages
+            .as_ref()
+            .map(|vars| vars.iter().cloned().collect())
+            .unwrap_or_default();
+
+        // Check if this is an entity fetch (has _entities in the operation)
+        let operation_str = &fetch.operation.document_str;
+        let is_entity_fetch = operation_str.contains("_entities");
+
+        // Try to extract entity type from inline fragment
+        // OPTIMIZATION: Uses pre-compiled regex (ENTITY_TYPE_REGEX)
+        // Regex compilation takes ~100μs, but extraction is ~1μs
+        // Before: compiled regex on every entity fetch
+        // After: compile once, reuse for all extractions
+        let entity_type = if is_entity_fetch {
+            ENTITY_TYPE_REGEX
+                .captures(operation_str)
+                .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
+        } else {
+            None
+        };
+
+        PlanNode::Fetch(FetchNode {
+            subgraph: fetch.service_name.clone(),
+            url,
+            operation: operation_str.clone(),
+            requires,
+            provides: vec![], // Not directly available from Hive
+            is_entity_fetch,
+            entity_type,
         })
     }
 
     /// Convert a Hive PlanNode to our PlanNode format
     fn convert_hive_node(&self, hive_node: &HivePlanNode) -> Result<PlanNode, HivePlannerError> {
         match hive_node {
-            HivePlanNode::Fetch(fetch) => {
+            HivePlanNode::Fetch(fetch) => Ok(self.convert_fetch_node(fetch)),
+
+            HivePlanNode::BatchFetch(batch) => {
+                // hive-router-query-planner 2.x introduced an entity-batched fetch
+                // node. It carries the same subgraph/operation shape as a `Fetch`;
+                // the BFF executor models it as a single entity fetch.
                 let url = self
                     .subgraph_endpoints
-                    .get(&fetch.service_name)
+                    .get(&batch.service_name)
                     .cloned()
                     .unwrap_or_else(|| {
                         format!(
                             "http://{}:{}{}",
-                            fetch.service_name,
+                            batch.service_name,
                             self.config.subgraph_default_port,
                             self.config.subgraph_default_path
                         )
                     });
 
-                // Extract requires as field names if present
-                let requires: Vec<String> = fetch
+                let requires: Vec<String> = batch
                     .variable_usages
                     .as_ref()
                     .map(|vars| vars.iter().cloned().collect())
                     .unwrap_or_default();
 
-                // Check if this is an entity fetch (has _entities in the operation)
-                let operation_str = &fetch.operation.document_str;
+                let operation_str = &batch.operation.document_str;
                 let is_entity_fetch = operation_str.contains("_entities");
-
-                // Try to extract entity type from inline fragment
-                // OPTIMIZATION: Uses pre-compiled regex (ENTITY_TYPE_REGEX)
-                // Regex compilation takes ~100μs, but extraction is ~1μs
-                // Before: compiled regex on every entity fetch
-                // After: compile once, reuse for all extractions
                 let entity_type = if is_entity_fetch {
                     ENTITY_TYPE_REGEX
                         .captures(operation_str)
@@ -722,11 +836,11 @@ impl HivePlanner {
                 };
 
                 Ok(PlanNode::Fetch(FetchNode {
-                    subgraph: fetch.service_name.clone(),
+                    subgraph: batch.service_name.clone(),
                     url,
                     operation: operation_str.clone(),
                     requires,
-                    provides: vec![], // Not directly available from Hive
+                    provides: vec![],
                     is_entity_fetch,
                     entity_type,
                 }))
@@ -773,8 +887,9 @@ impl HivePlanner {
             }
 
             HivePlanNode::Subscription(sub) => {
-                // Subscriptions use the primary fetch node
-                self.convert_hive_node(&sub.primary)
+                // Subscriptions use the primary fetch node. In 2.x `primary` is a
+                // `FetchNode` directly, so convert it via the shared helper.
+                Ok(self.convert_fetch_node(&sub.primary))
             }
 
             HivePlanNode::Defer(_) => {
@@ -905,9 +1020,9 @@ mod tests {
         let plan = plan.unwrap();
 
         // Should have exactly one fetch to AUTH
-        let fetch_nodes = plan.fetch_nodes();
+        let fetch_nodes = HivePlanner::collect_fetch_service_names(&plan);
         assert_eq!(fetch_nodes.len(), 1, "Expected 1 fetch node");
-        assert_eq!(fetch_nodes[0].service_name, "auth");
+        assert_eq!(fetch_nodes[0], "auth");
     }
 
     #[tokio::test]
@@ -982,7 +1097,7 @@ mod tests {
         let plan = plan.unwrap();
 
         // Should have multiple fetch nodes (AUTH + ORDER)
-        let fetch_nodes = plan.fetch_nodes();
+        let fetch_nodes = HivePlanner::collect_fetch_service_names(&plan);
         assert!(
             fetch_nodes.len() >= 2,
             "Expected at least 2 fetch nodes, got {}",
@@ -1034,9 +1149,9 @@ mod tests {
         let plan = plan.unwrap();
 
         // Should have one fetch to ORDER
-        let fetch_nodes = plan.fetch_nodes();
+        let fetch_nodes = HivePlanner::collect_fetch_service_names(&plan);
         assert_eq!(fetch_nodes.len(), 1, "Expected 1 fetch node");
-        assert_eq!(fetch_nodes[0].service_name, "order");
+        assert_eq!(fetch_nodes[0], "order");
     }
 
     #[tokio::test]
@@ -1600,10 +1715,10 @@ mod tests {
 
             match result {
                 Ok(plan) => {
-                    let fetch_nodes = plan.fetch_nodes();
+                    let fetch_nodes = HivePlanner::collect_fetch_service_names(&plan);
                     let subgraphs: Vec<&str> = fetch_nodes
                         .iter()
-                        .map(|f| f.service_name.as_str())
+                        .map(|f| f.as_str())
                         .collect();
 
                     let has_expected = expected_subgraphs.iter().all(|s| subgraphs.contains(s));
