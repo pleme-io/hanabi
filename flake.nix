@@ -35,7 +35,9 @@
       inherit self;
       serviceName = "hanabi";
       registry = "ghcr.io/pleme-io/hanabi";
-      packageName = "hanabi";
+      # The workspace's service crate is `hanabi-bff` (the root Cargo.toml);
+      # `hanabi` is the image/service name, not the crate name.
+      packageName = "hanabi-bff";
       namespace = "hanabi-system";
       architectures = ["amd64" "arm64"];
       ports = { graphql = 80; health = 8080; metrics = 8080; };
