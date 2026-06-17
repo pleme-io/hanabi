@@ -42,8 +42,10 @@ jobs:
       # releases are cut from it on a v* tag when desired.
       tag: amd64-r${{ github.run_number }}-${{ github.sha }}
       additionalTags: amd64-latest
-      # rio's self-hosted x86_64 ARC scale-set was renamed rio-builder → rio-build-01
-      # (k8s commit 1739fc0, to escape a duplicate runner registration). Must match
-      # or the build queues forever waiting on a label that no longer exists.
-      runner: rio-build-01
+      # No `runner:` override → substrate image-push.yml's default `ubuntu-24.04`,
+      # GitHub's FREE hosted x86_64 runner (= native amd64, fixes the cross-arch
+      # `exec format error`), with nix installed by the reusable workflow itself.
+      # hanabi is public/open-source, so it must NOT couple its build to private
+      # rio infra (tool-distribution rule) — and the self-hosted ARC scale-set was
+      # flaky (jobs queued 24h then cancelled). Hosted is correct, free, and works.
     secrets: inherit
