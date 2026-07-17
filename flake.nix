@@ -1,45 +1,11 @@
 {
   description = "Hanabi - Web server and BFF (Backend for Frontend) platform service";
 
-  inputs = {
-    nixpkgs.follows = "substrate/nixpkgs";
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    substrate = {
-      url = "github:pleme-io/substrate";
-      inputs.fenix.follows = "fenix";
-    };
-    forge = {
-      url = "github:pleme-io/forge";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
-      inputs.substrate.follows = "substrate";
-      inputs.crate2nix.follows = "crate2nix";
-    };
-    crate2nix = {
-      url = "github:nix-community/crate2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    devenv = {
-      url = "github:cachix/devenv";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-  };
+  # substrate.rust.service dispatches over Cargo.gen.lock (the slim gen delta,
+  # reconstructed to the full BuildSpec in pure Nix) — no crate2nix, no Cargo.nix.
+  inputs.substrate.url = "github:pleme-io/substrate";
 
-  outputs = { self, nixpkgs, substrate, forge, crate2nix, devenv, ... }:
-    (import "${substrate}/lib/rust-service-flake.nix" {
-      inherit nixpkgs substrate forge crate2nix devenv;
-    }) {
-      inherit self;
-      serviceName = "hanabi";
-      registry = "ghcr.io/pleme-io/hanabi";
-      # The workspace's service crate is `hanabi-bff` (the root Cargo.toml);
-      # `hanabi` is the image/service name, not the crate name.
-      packageName = "hanabi-bff";
-      namespace = "hanabi-system";
-      architectures = ["amd64" "arm64"];
-      ports = { graphql = 80; health = 8080; metrics = 8080; };
-    };
+  outputs = { substrate, ... }: substrate.rust.service {
+    src = ./.;
+  };
 }
