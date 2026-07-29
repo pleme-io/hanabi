@@ -16,6 +16,58 @@ pub struct SecurityConfig {
 
     /// Additional security headers
     pub headers: SecurityHeaders,
+
+    /// Transport-level requirements (HTTPS enforcement behind a proxy)
+    pub transport: TransportSecurity,
+}
+
+/// How to treat a request that arrived over plain HTTP.
+///
+/// A closed set, so an enum: the difference between silently serving cleartext
+/// and redirecting is a security property, and a String field invites a typo
+/// that fails open.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RequireHttps {
+    /// Serve whatever arrives. Correct only when nothing can reach the service
+    /// over cleartext, e.g. a mesh with mTLS everywhere.
+    Off,
+    /// 301 to the https:// form when the trusted proxy reports the original
+    /// scheme was http. This is the behaviour a TLS-terminating ingress needs,
+    /// because the service itself only ever sees plaintext.
+    RedirectForwardedHttp,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct TransportSecurity {
+    /// What to do with a request whose original scheme was http.
+    pub require_https: RequireHttps,
+
+    /// Whether X-Forwarded-* may be trusted at all. When false the
+    /// forwarded-scheme redirect is skipped even if enabled, because a
+    /// spoofable header must not drive a security decision.
+    pub trust_forwarded_headers: bool,
+}
+
+impl Default for TransportSecurity {
+    fn default() -> Self {
+        Self {
+            // Off by default: a deployment that is not behind a
+            // scheme-reporting proxy would otherwise redirect-loop.
+            require_https: RequireHttps::Off,
+            trust_forwarded_headers: false,
+        }
+    }
+}
+
+impl TransportSecurity {
+    /// True only when both the intent and the trust prerequisite hold. Keeping
+    /// this as one method means a caller cannot check the intent and forget the
+    /// trust flag.
+    pub fn should_redirect_forwarded_http(&self) -> bool {
+        self.trust_forwarded_headers && self.require_https == RequireHttps::RedirectForwardedHttp
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -304,6 +356,54 @@ mod cross_origin_tests {
         assert!(CrossOriginOpenerPolicy::SameOrigin.breaks_popup_auth());
         assert!(!CrossOriginOpenerPolicy::SameOriginAllowPopups.breaks_popup_auth());
         assert!(!CrossOriginOpenerPolicy::UnsafeNone.breaks_popup_auth());
+    }
+
+    #[test]
+    fn https_redirect_requires_both_intent_and_trust() {
+        // The whole point of collapsing this into one method: an operator who
+        // asks for the redirect but has not declared the proxy trustworthy must
+        // NOT get a security decision driven by a spoofable header.
+        let intent_only = TransportSecurity {
+            require_https: RequireHttps::RedirectForwardedHttp,
+            trust_forwarded_headers: false,
+        };
+        assert!(!intent_only.should_redirect_forwarded_http());
+
+        let trust_only = TransportSecurity {
+            require_https: RequireHttps::Off,
+            trust_forwarded_headers: true,
+        };
+        assert!(!trust_only.should_redirect_forwarded_http());
+
+        let both = TransportSecurity {
+            require_https: RequireHttps::RedirectForwardedHttp,
+            trust_forwarded_headers: true,
+        };
+        assert!(both.should_redirect_forwarded_http());
+    }
+
+    #[test]
+    fn transport_defaults_to_no_redirect() {
+        // A deployment not behind a scheme-reporting proxy would redirect-loop,
+        // so off is the only safe default.
+        let t = TransportSecurity::default();
+        assert_eq!(t.require_https, RequireHttps::Off);
+        assert!(!t.trust_forwarded_headers);
+        assert!(!t.should_redirect_forwarded_http());
+    }
+
+    #[test]
+    fn require_https_parses_from_kebab_yaml() {
+        let yaml = "require_https: redirect-forwarded-http\ntrust_forwarded_headers: true\n";
+        let t: TransportSecurity = serde_yaml::from_str(yaml).expect("should parse");
+        assert!(t.should_redirect_forwarded_http());
+    }
+
+    #[test]
+    fn a_misspelled_require_https_is_a_parse_error() {
+        let yaml = "require_https: redirect-forwarded-https\n";
+        let parsed: Result<TransportSecurity, _> = serde_yaml::from_str(yaml);
+        assert!(parsed.is_err(), "a misspelled mode must not parse");
     }
 
     #[test]

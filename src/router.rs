@@ -44,7 +44,8 @@ use crate::handlers::geolocation;
 use crate::health::{health_live, health_ready, health_startup};
 use crate::health_aggregator::direct_service_health;
 use crate::middleware::{
-    build_cors_layer, cache_control_headers, request_metrics, security_headers, spa_404_fallback,
+    build_cors_layer, cache_control_headers, https_redirect, request_metrics, security_headers,
+    spa_404_fallback,
 };
 use crate::rate_limiting::build_rate_limit_layer;
 use crate::state::AppState;
@@ -244,6 +245,15 @@ pub fn apply_global_middleware(
             cache_control_headers,
         ));
     }
+
+    // Layered LAST so it runs FIRST: axum applies layers outermost-last, and a
+    // cleartext request should be redirected before any handler does work on it.
+    // The middleware itself is inert unless security.transport opts in, so this
+    // is unconditional here rather than behind another toggle.
+    router = router.layer(axum_middleware::from_fn_with_state(
+        state.clone(),
+        https_redirect,
+    ));
 
     // === BeforeRouteHandling custom middleware ===
     for (_, f) in customization.custom_at(MiddlewareSlot::BeforeRouteHandling) {

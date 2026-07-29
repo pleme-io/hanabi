@@ -1,0 +1,102 @@
+environment: production
+
+# Scoped hanabi profile for serving the akeyless web-ui SPA, replacing nginx.
+#
+# SCOPE FIRST. hanabi is a federation BFF that also serves static files. For this
+# use case it serves static files and nothing else, so every other subsystem is
+# off. That is not tidiness: an enabled BFF proxy, webhook surface or image proxy
+# is reachable attack surface that this deployment has no use for. Least
+# functionality by construction, not by convention.
+#
+# The header values below are not invented. They reproduce what the nginx image
+# actually sends today, read off a running container, so swapping the server does
+# not silently change the security posture of the page.
+
+features:
+  enable_bff: false
+  enable_metrics: false
+  enable_bug_reports: false
+  enable_detailed_health_checks: false
+
+security:
+  transport:
+    # The container never terminates TLS. The ingress does, and reports the
+    # original scheme, so a cleartext request must be redirected rather than
+    # served. Matches the nginx `if ($http_x_forwarded_proto = 'http')` rule.
+    require_https: redirect-forwarded-http
+    # Explicitly declared: the only thing in front of this container is the
+    # cluster ingress, so its forwarded headers are trustworthy. Without this the
+    # redirect above is inert by design.
+    trust_forwarded_headers: true
+
+  headers:
+    x_frame_options: "DENY"
+    referrer_policy: "strict-origin-when-cross-origin"
+    permissions_policy: "geolocation=(), microphone=(), camera=(), payment=()"
+
+    # ★ The one value that must not drift. The login flow opens a popup and the
+    # popup talks back to its opener; `same-origin` severs that and breaks
+    # sign-in outright. hanabi's default is `same-origin`, which is why this is
+    # stated here rather than inherited.
+    cross_origin_opener_policy: same-origin-allow-popups
+
+    # Tighter than hanabi's `cross-origin` default. Nothing external needs to
+    # embed this page's resources.
+    cross_origin_resource_policy: same-origin
+
+    # Permits third-party scripts the SPA loads without demanding CORP headers
+    # from them, while still withholding credentials on those loads.
+    cross_origin_embedder_policy: credentialless
+
+  hsts:
+    max_age: 31536000
+    include_subdomains: true
+    preload: true
+
+  cors:
+    # Only the console origins. The SPA is same-origin with its own assets; this
+    # list exists for the env-config fetch, which nginx handled with a
+    # $http_origin map.
+    allowed_origins:
+      - https://console.akeyless.io
+      - https://console.akeyless.dev
+    allow_credentials: false
+    max_age_secs: 3600
+    additional_allowed_headers: []
+    additional_exposed_headers: []
+
+  csp:
+    # No same-origin API here: this profile serves static assets only, so there
+    # is no /graphql to allow.
+    api_domains: []
+    ws_domains: []
+
+    additional_connect_src:
+      - "*.akeyless.io"
+      - "*.akeyless.dev"
+      - https://sfs.akeyless-security.com
+      - https://*.s3.us-east-2.amazonaws.com
+      - https://changelog.akeyless.io
+      - https://raw.githubusercontent.com
+      - https://*.browser-intake-datadoghq.com
+
+    script_sources:
+      - https://app.getbeamer.com
+      - https://www.googletagmanager.com
+
+    style_sources:
+      - https://fonts.googleapis.com
+
+    font_sources:
+      - https://fonts.gstatic.com
+
+    frame_sources:
+      - https://www.youtube.com
+
+    # Narrower than the default `https:` wildcard.
+    img_sources:
+      - "'self'"
+      - "data:"
+
+compression:
+  enable_gzip: true
