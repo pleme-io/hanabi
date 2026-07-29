@@ -24,6 +24,13 @@ server:
   # 8000 here is the non-root-safe value and the mismatch is deliberate and
   # tracked rather than silently papered over.
   http_port: 8000
+  # REQUIRED and must differ from http_port. Both default to 0 and validate()
+  # rejects 0 for either, plus rejects them being equal. Omitting this does not
+  # crash the pod: main.rs catches the load error and starts in DEGRADED mode,
+  # which binds, answers the liveness probe, and serves an error page instead of
+  # the SPA. Green probes, wrong content, no crashloop to investigate.
+  health_port: 8080
+  bind_address: 0.0.0.0
   service_name: web-ui
 
 features:

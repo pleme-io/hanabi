@@ -177,3 +177,58 @@ fn the_profile_needs_no_server_specific_env() {
     assert!(!c.server.static_dir.is_empty());
     assert!(c.server.http_port > 0);
 }
+
+/// Loads the profile through hanabi's OWN loader, so the loader's validate()
+/// gate runs.
+///
+/// This test exists because the field assertions above all passed while the
+/// profile was unloadable: health_port was absent, defaults to 0, and
+/// validate() rejects 0. main.rs does not crashloop on that. It starts in
+/// DEGRADED mode, binds, answers the liveness probe and serves an error page
+/// instead of the SPA. Asserting on parsed struct fields cannot see any of
+/// that; only running the real loader can.
+#[test]
+fn the_profile_actually_loads_through_hanabis_own_loader() {
+    // validate() also requires server.static_dir to EXIST on disk. In the image
+    // it does, because the assets are baked at that path; on a dev machine
+    // /usr/share/nginx/html does not. So the real profile is loaded with ONLY
+    // that one path redirected at a temp dir. Every other field, and the whole
+    // validate() gate, is the real thing. static_dir's real value is asserted
+    // separately by static_dir_is_the_path_the_chart_mounts_into.
+    let raw = std::fs::read_to_string("config/akeyless-web-ui.yaml").expect("profile must exist");
+    let tmp = std::env::temp_dir().join("hanabi-profile-test-static");
+    std::fs::create_dir_all(&tmp).expect("temp static dir");
+    let redirected = raw.replace(
+        "static_dir: /usr/share/nginx/html",
+        &format!("static_dir: {}", tmp.display()),
+    );
+    assert!(
+        redirected != raw,
+        "the static_dir line must have been found and redirected"
+    );
+    let path = std::env::temp_dir().join("hanabi-profile-test.yaml");
+    std::fs::write(&path, redirected).expect("write redirected profile");
+
+    // AppConfig::load() reads CONFIG_PATH. Serialised because env is process-wide.
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _guard = LOCK.lock().unwrap();
+
+    let previous = std::env::var("CONFIG_PATH").ok();
+    unsafe { std::env::set_var("CONFIG_PATH", &path) };
+
+    let loaded = AppConfig::load();
+
+    match previous {
+        Some(v) => unsafe { std::env::set_var("CONFIG_PATH", v) },
+        None => unsafe { std::env::remove_var("CONFIG_PATH") },
+    }
+
+    let cfg = loaded.unwrap_or_else(|e| {
+        panic!("the profile must load cleanly or the pod serves a degraded error page: {e}")
+    });
+    assert_eq!(cfg.server.http_port, 8000);
+    assert_ne!(
+        cfg.server.health_port, cfg.server.http_port,
+        "validate() rejects equal http and health ports"
+    );
+}
