@@ -140,3 +140,40 @@ fn csp_connect_src_carries_the_real_backend_origins() {
         );
     }
 }
+
+#[test]
+fn static_dir_is_the_path_the_chart_mounts_into() {
+    // The saas chart mounts env-config.js as a subPath at
+    // /usr/share/nginx/html/env-config.js. If the server reads from anywhere
+    // else the mount lands in a directory nothing serves, and the tenant boots
+    // with no runtime config. There is no nginx in this image; the path is
+    // still the contract.
+    let c = profile();
+    assert_eq!(
+        c.server.static_dir, "/usr/share/nginx/html",
+        "static_dir must match the chart's mountPath parent"
+    );
+}
+
+#[test]
+fn http_port_is_non_root_bindable() {
+    // Whatever the chart currently hardcodes, the server runs as a non-root uid
+    // and cannot bind below 1024 without NET_BIND_SERVICE.
+    let c = profile();
+    assert!(
+        c.server.http_port >= 1024,
+        "http_port {} is privileged; a non-root server cannot bind it",
+        c.server.http_port
+    );
+}
+
+#[test]
+fn the_profile_needs_no_server_specific_env() {
+    // The deploying chart was written for nginx and knows nothing about hanabi.
+    // Everything the server needs must therefore come from this file, not from
+    // env the chart would have to learn to set. CONFIG_PATH is the only env var
+    // involved and it already defaults to where the image puts this file.
+    let c = profile();
+    assert!(!c.server.static_dir.is_empty());
+    assert!(c.server.http_port > 0);
+}

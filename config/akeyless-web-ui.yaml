@@ -12,6 +12,20 @@ environment: production
 # actually sends today, read off a running container, so swapping the server does
 # not silently change the security posture of the page.
 
+server:
+  # /usr/share/nginx/html even though there is no nginx here. The saas chart
+  # mounts its env-config.js ConfigMap subPath into this exact directory, so the
+  # path is a contract the chart owns, not a preference. Serving elsewhere loses
+  # the tenant's runtime config and looks like an app bug.
+  static_dir: /usr/share/nginx/html
+  # The chart hardcodes containerPort 80 and probes port 80. 80 is privileged, so
+  # a non-root server cannot bind it without NET_BIND_SERVICE. See the note in
+  # the akeyless PR: this lane needs either that capability or a chart change;
+  # 8000 here is the non-root-safe value and the mismatch is deliberate and
+  # tracked rather than silently papered over.
+  http_port: 8000
+  service_name: web-ui
+
 features:
   enable_bff: false
   enable_metrics: false
