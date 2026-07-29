@@ -105,27 +105,27 @@ pub async fn security_headers(
         HeaderValue::from_static("1; mode=block"),
     );
 
-    // Cross-Origin-Opener-Policy (COOP) - Isolate browsing context
-    // Prevents cross-origin attacks via window.opener
+    // Cross-origin isolation trio (COOP / COEP / CORP).
+    //
+    // These were hardcoded. They are now typed config, because the choice is
+    // deployment-specific and getting it wrong is not a subtle degradation:
+    // COOP `same-origin` severs window.opener, which breaks a popup-based
+    // OAuth/PKCE login outright. The values are closed sets in the spec, so the
+    // config carries enums and a typo fails at startup rather than at login.
+    // `as_header_value()` returns &'static str, so this is still the
+    // allocation-free from_static path the rest of this function uses.
+    let cross_origin = &state.config.security.headers;
     headers.insert(
         http::HeaderName::from_static("cross-origin-opener-policy"),
-        HeaderValue::from_static("same-origin"),
+        HeaderValue::from_static(cross_origin.cross_origin_opener_policy.as_header_value()),
     );
-
-    // Cross-Origin-Embedder-Policy (COEP) - Allow cross-origin resources without credentials
-    // credentialless: Allows resources like Stripe.js without requiring CORP headers
-    // More permissive than require-corp but still maintains security by not sending credentials
     headers.insert(
         http::HeaderName::from_static("cross-origin-embedder-policy"),
-        HeaderValue::from_static("credentialless"),
+        HeaderValue::from_static(cross_origin.cross_origin_embedder_policy.as_header_value()),
     );
-
-    // Cross-Origin-Resource-Policy (CORP) - Allow cross-origin resource loading
-    // Set to cross-origin to work with COEP: credentialless
-    // This allows our resources to be loaded by external scripts/services
     headers.insert(
         http::HeaderName::from_static("cross-origin-resource-policy"),
-        HeaderValue::from_static("cross-origin"),
+        HeaderValue::from_static(cross_origin.cross_origin_resource_policy.as_header_value()),
     );
 
     // X-DNS-Prefetch-Control - Disable DNS prefetching to prevent privacy leaks
