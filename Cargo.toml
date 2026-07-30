@@ -95,7 +95,7 @@ governor = "0.6"
 # without this line type-checks, passes every existing test, and takes down
 # every request carrying a JWT. `rust_crypto` (rsa/p256/p384/ed25519-dalek/
 # hmac/sha2) over `aws_lc_rs` keeps the pure-Rust, no-FFI dependency posture.
-jsonwebtoken = { version = "10", features = ["rust_crypto"] }
+jsonwebtoken = "10"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
