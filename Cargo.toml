@@ -83,18 +83,24 @@ governor = "0.6"
 
 # JWT decoding for role-based rate limit exemption
 # 9.3.1 carries CVE-2026-25537 (type confusion leading to potential
-# authorization bypass); 10.3.0 is the fixed version. Reachable here -- decode()
-# runs on every request carrying a JWT -- so this is a bump, not a reachability
-# waiver, even though these two call sites decode claims without verifying.
+# authorization bypass); 10.3.0 is the fixed version. Reachable here -- the
+# decode path runs on every request carrying a JWT -- so this is a bump, not a
+# reachability waiver, even though both call sites read claims without verifying.
 #
-# `rust_crypto` IS LOAD-BEARING, NOT A PREFERENCE. In 10.x the crypto backend
-# moved behind two mutually-exclusive features and `default` selects NEITHER
-# (default = ["use_pem"]), so `jsonwebtoken = "10"` alone compiles clean and
-# then PANICS the first time decode() runs: "Could not automatically determine
-# the process-level CryptoProvider from jsonwebtoken crate features." A bump
-# without this line type-checks, passes every existing test, and takes down
-# every request carrying a JWT. `rust_crypto` (rsa/p256/p384/ed25519-dalek/
-# hmac/sha2) over `aws_lc_rs` keeps the pure-Rust, no-FFI dependency posture.
+# NO CRYPTO PROVIDER FEATURE, DELIBERATELY. 10.x moved the backend behind two
+# mutually-exclusive features and `default` selects NEITHER, so any call to the
+# verifying `decode()` PANICS at runtime ("Could not automatically determine the
+# process-level CryptoProvider") while compiling perfectly cleanly. Hanabi never
+# verifies a JWT -- the auth service does -- so both call sites use
+# `dangerous::insecure_decode`, which takes no key and needs no provider.
+#
+# Enabling `rust_crypto` to silence that latent panic would pull in `rsa`, whose
+# RUSTSEC-2023-0071 / CVE-2023-49092 (Marvin timing sidechannel) records
+# `patched = []` -- no fixed version exists, so it could never be remediated at
+# cause. Carrying an incurable advisory in a FedRAMP-facing image to support a
+# call that does not exist is the wrong trade. If a genuine verifying path is
+# ever added, add `features = ["rust_crypto"]` WITH it (never `aws_lc_rs` --
+# that is C via FFI) and re-run the CVE gate, because that reintroduces `rsa`.
 jsonwebtoken = "10"
 
 # Serialization
