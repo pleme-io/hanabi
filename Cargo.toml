@@ -47,7 +47,12 @@ tar = "0.4"
 redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
 
 # NATS for cross-service event subscription (session invalidation from backend)
-async-nats = "0.38"
+# 0.47 is the first release whose rustls-webpki requirement is ^0.103.10 rather
+# than ^0.102; 0.102.8 carries four advisories (GHSA-82j2-j2ch-gfr8 HIGH,
+# GHSA-pwjx-qhcg-rvj4, GHSA-965h-392x-2mh5, GHSA-xgp8-3hg3-c2mh) and async-nats
+# was its ONLY dependent in this lock, so the bump unifies onto the 0.103.13
+# that rustls 0.23 already resolved rather than adding a second chain.
+async-nats = "0.50"
 
 # Startup notifications (Discord, Grafana, health probes)
 pleme-notifications = "0.1"
@@ -77,7 +82,20 @@ tower_governor = "0.4"
 governor = "0.6"
 
 # JWT decoding for role-based rate limit exemption
-jsonwebtoken = "9"
+# 9.3.1 carries CVE-2026-25537 (type confusion leading to potential
+# authorization bypass); 10.3.0 is the fixed version. Reachable here -- decode()
+# runs on every request carrying a JWT -- so this is a bump, not a reachability
+# waiver, even though these two call sites decode claims without verifying.
+#
+# `rust_crypto` IS LOAD-BEARING, NOT A PREFERENCE. In 10.x the crypto backend
+# moved behind two mutually-exclusive features and `default` selects NEITHER
+# (default = ["use_pem"]), so `jsonwebtoken = "10"` alone compiles clean and
+# then PANICS the first time decode() runs: "Could not automatically determine
+# the process-level CryptoProvider from jsonwebtoken crate features." A bump
+# without this line type-checks, passes every existing test, and takes down
+# every request carrying a JWT. `rust_crypto` (rsa/p256/p384/ed25519-dalek/
+# hmac/sha2) over `aws_lc_rs` keeps the pure-Rust, no-FFI dependency posture.
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -107,13 +125,20 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Prometheus metrics (for /metrics endpoint alongside StatsD)
-prometheus = { version = "0.13", features = ["process"] }
+# 0.14 is the first release to move its optional protobuf dependency from ^2.0
+# to ^3.7.2. protobuf 2.28.0 carries CVE-2025-53605 (uncontrolled recursion) and
+# prometheus is its only dependent here; 3.7.2 is precisely the fixed version.
+prometheus = { version = "0.14", features = ["process"] }
 
 # OpenTelemetry for distributed tracing
-opentelemetry = { version = "0.31", optional = true }
-opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"], optional = true }
-opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic"], optional = true }
-tracing-opentelemetry = { version = "0.32", optional = true }
+# 0.32 across the family: opentelemetry_sdk 0.31.0 carries CVE-2026-48504
+# (unbounded memory allocation in W3C Baggage propagation) and 0.32.1 is the
+# fixed version. The family moves together -- tracing-opentelemetry 0.33 is the
+# release whose opentelemetry/opentelemetry_sdk requirements are ^0.32.
+opentelemetry = { version = "0.32", optional = true }
+opentelemetry_sdk = { version = "0.32", features = ["rt-tokio"], optional = true }
+opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"], optional = true }
+tracing-opentelemetry = { version = "0.33", optional = true }
 
 # System info and utilities
 sys-info = "0.9"
