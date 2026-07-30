@@ -1,0 +1,125 @@
+environment: production
+
+# Scoped hanabi profile: serve a static SPA whose login is a POPUP, replacing
+# nginx, on a distroless image.
+#
+# This is the reference profile for the one configuration that is easy to get
+# wrong and expensive to get wrong: a popup-based OAuth/PKCE flow. hanabi's
+# default COOP is same-origin, which severs window.opener and breaks that login
+# outright, so a deployment of this shape MUST override it. Everything else here
+# is the least-functionality posture that follows.
+#
+# SCOPE FIRST. hanabi is a federation BFF that also serves static files. For this
+# use case it serves static files and nothing else, so every other subsystem is
+# off. That is not tidiness: an enabled BFF proxy, webhook surface or image proxy
+# is reachable attack surface that this deployment has no use for. Least
+# functionality by construction, not by convention.
+#
+# The header values are the posture a hardened nginx SPA image ships today, so
+# swapping the server does not silently change the security posture of the page.
+
+server:
+  # /usr/share/nginx/html even though there is no nginx here. The saas chart
+  # A Kubernetes chart written for nginx commonly mounts a runtime-config
+  # ConfigMap subPath into this exact directory, so the path is a contract the
+  # chart owns rather than a preference. Serving from elsewhere silently loses
+  # that config and presents as an application bug.
+  static_dir: /usr/share/nginx/html
+  # A chart written for nginx-as-root commonly hardcodes containerPort 80 and
+  # probes it. 80 is privileged, so a non-root server cannot bind it without
+  # NET_BIND_SERVICE. 8000 is the non-root-safe value; reconciling it needs
+  # either that capability or a chart change, and stating the mismatch here is
+  # better than papering over it.
+  http_port: 8000
+  # REQUIRED and must differ from http_port. Both default to 0 and validate()
+  # rejects 0 for either, plus rejects them being equal. Omitting this does not
+  # crash the pod: main.rs catches the load error and starts in DEGRADED mode,
+  # which binds, answers the liveness probe, and serves an error page instead of
+  # the SPA. Green probes, wrong content, no crashloop to investigate.
+  health_port: 8080
+  bind_address: 0.0.0.0
+  service_name: spa
+
+features:
+  enable_bff: false
+  enable_metrics: false
+  enable_bug_reports: false
+  enable_detailed_health_checks: false
+
+security:
+  transport:
+    # The container never terminates TLS. The ingress does, and reports the
+    # original scheme, so a cleartext request must be redirected rather than
+    # served. Matches the nginx `if ($http_x_forwarded_proto = 'http')` rule.
+    require_https: redirect-forwarded-http
+    # Explicitly declared: the only thing in front of this container is the
+    # cluster ingress, so its forwarded headers are trustworthy. Without this the
+    # redirect above is inert by design.
+    trust_forwarded_headers: true
+
+  headers:
+    x_frame_options: "DENY"
+    referrer_policy: "strict-origin-when-cross-origin"
+    permissions_policy: "geolocation=(), microphone=(), camera=(), payment=()"
+
+    # ★ The one value that must not drift. The login flow opens a popup and the
+    # popup talks back to its opener; `same-origin` severs that and breaks
+    # sign-in outright. hanabi's default is `same-origin`, which is why this is
+    # stated here rather than inherited.
+    cross_origin_opener_policy: same-origin-allow-popups
+
+    # Tighter than hanabi's `cross-origin` default. Nothing external needs to
+    # embed this page's resources.
+    cross_origin_resource_policy: same-origin
+
+    # Permits third-party scripts the SPA loads without demanding CORP headers
+    # from them, while still withholding credentials on those loads.
+    cross_origin_embedder_policy: credentialless
+
+  hsts:
+    max_age: 31536000
+    include_subdomains: true
+    preload: true
+
+  cors:
+    # Only the console origins. The SPA is same-origin with its own assets; this
+    # list exists for the env-config fetch, which nginx handled with a
+    # $http_origin map.
+    allowed_origins:
+      - https://console.example.com
+    allow_credentials: false
+    max_age_secs: 3600
+    additional_allowed_headers: []
+    additional_exposed_headers: []
+
+  csp:
+    # No same-origin API here: this profile serves static assets only, so there
+    # is no /graphql to allow.
+    api_domains: []
+    ws_domains: []
+
+    # Every origin the SPA actually calls. Keep this list closed: a wildcard
+    # here is the difference between a CSP and a decoration.
+    additional_connect_src:
+      - "*.example.com"
+      - https://*.s3.us-east-2.amazonaws.com
+
+    script_sources:
+      - https://www.googletagmanager.com
+
+    style_sources:
+      - https://fonts.googleapis.com
+
+    font_sources:
+      - https://fonts.gstatic.com
+
+    frame_sources:
+      - https://www.youtube.com
+
+    # Narrower than the default `https:` wildcard.
+    img_sources:
+      - "'self'"
+      - "data:"
+
+compression:
+  enable_gzip: true

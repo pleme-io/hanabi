@@ -16,6 +16,58 @@ pub struct SecurityConfig {
 
     /// Additional security headers
     pub headers: SecurityHeaders,
+
+    /// Transport-level requirements (HTTPS enforcement behind a proxy)
+    pub transport: TransportSecurity,
+}
+
+/// How to treat a request that arrived over plain HTTP.
+///
+/// A closed set, so an enum: the difference between silently serving cleartext
+/// and redirecting is a security property, and a String field invites a typo
+/// that fails open.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum RequireHttps {
+    /// Serve whatever arrives. Correct only when nothing can reach the service
+    /// over cleartext, e.g. a mesh with mTLS everywhere.
+    Off,
+    /// 301 to the https:// form when the trusted proxy reports the original
+    /// scheme was http. This is the behaviour a TLS-terminating ingress needs,
+    /// because the service itself only ever sees plaintext.
+    RedirectForwardedHttp,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct TransportSecurity {
+    /// What to do with a request whose original scheme was http.
+    pub require_https: RequireHttps,
+
+    /// Whether X-Forwarded-* may be trusted at all. When false the
+    /// forwarded-scheme redirect is skipped even if enabled, because a
+    /// spoofable header must not drive a security decision.
+    pub trust_forwarded_headers: bool,
+}
+
+impl Default for TransportSecurity {
+    fn default() -> Self {
+        Self {
+            // Off by default: a deployment that is not behind a
+            // scheme-reporting proxy would otherwise redirect-loop.
+            require_https: RequireHttps::Off,
+            trust_forwarded_headers: false,
+        }
+    }
+}
+
+impl TransportSecurity {
+    /// True only when both the intent and the trust prerequisite hold. Keeping
+    /// this as one method means a caller cannot check the intent and forget the
+    /// trust flag.
+    pub fn should_redirect_forwarded_http(&self) -> bool {
+        self.trust_forwarded_headers && self.require_https == RequireHttps::RedirectForwardedHttp
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -121,6 +173,78 @@ impl Default for HstsConfig {
     }
 }
 
+/// Cross-Origin-Opener-Policy.
+///
+/// A closed set from the HTML spec, so it is an enum rather than a String: the
+/// difference between `same-origin` and `same-origin-allow-popups` decides
+/// whether a popup-based OAuth/PKCE flow can talk to its opener, and a typo in
+/// a String field would ship a broken login instead of failing to start.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CrossOriginOpenerPolicy {
+    /// No isolation. The opener relationship is fully preserved.
+    UnsafeNone,
+    /// Isolates cross-origin documents but KEEPS the opener link for popups
+    /// this document itself opened. Required by popup-based PKCE flows.
+    SameOriginAllowPopups,
+    /// Full isolation. Severs `window.opener`, which breaks popup auth.
+    SameOrigin,
+}
+
+/// Cross-Origin-Embedder-Policy. Closed set, same reasoning as COOP.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CrossOriginEmbedderPolicy {
+    UnsafeNone,
+    Credentialless,
+    RequireCorp,
+}
+
+/// Cross-Origin-Resource-Policy. Closed set, same reasoning as COOP.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CrossOriginResourcePolicy {
+    SameSite,
+    SameOrigin,
+    CrossOrigin,
+}
+
+impl CrossOriginOpenerPolicy {
+    pub fn as_header_value(self) -> &'static str {
+        match self {
+            Self::UnsafeNone => "unsafe-none",
+            Self::SameOriginAllowPopups => "same-origin-allow-popups",
+            Self::SameOrigin => "same-origin",
+        }
+    }
+
+    /// True when this policy severs `window.opener`, so a popup-based auth
+    /// flow cannot complete under it.
+    pub fn breaks_popup_auth(self) -> bool {
+        matches!(self, Self::SameOrigin)
+    }
+}
+
+impl CrossOriginEmbedderPolicy {
+    pub fn as_header_value(self) -> &'static str {
+        match self {
+            Self::UnsafeNone => "unsafe-none",
+            Self::Credentialless => "credentialless",
+            Self::RequireCorp => "require-corp",
+        }
+    }
+}
+
+impl CrossOriginResourcePolicy {
+    pub fn as_header_value(self) -> &'static str {
+        match self {
+            Self::SameSite => "same-site",
+            Self::SameOrigin => "same-origin",
+            Self::CrossOrigin => "cross-origin",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct SecurityHeaders {
@@ -132,6 +256,19 @@ pub struct SecurityHeaders {
 
     /// Permissions-Policy directives
     pub permissions_policy: String,
+
+    /// Cross-Origin-Opener-Policy. Was hardcoded to `same-origin` in
+    /// middleware; a deployment whose login is a popup needs
+    /// `same-origin-allow-popups` and had no way to say so.
+    pub cross_origin_opener_policy: CrossOriginOpenerPolicy,
+
+    /// Cross-Origin-Embedder-Policy. Was hardcoded to `credentialless`.
+    pub cross_origin_embedder_policy: CrossOriginEmbedderPolicy,
+
+    /// Cross-Origin-Resource-Policy. Was hardcoded to `cross-origin`, which is
+    /// the most permissive of the three; a same-origin-only deployment could
+    /// not tighten it.
+    pub cross_origin_resource_policy: CrossOriginResourcePolicy,
 }
 
 impl Default for SecurityHeaders {
@@ -140,6 +277,151 @@ impl Default for SecurityHeaders {
             x_frame_options: "DENY".to_string(),
             referrer_policy: "strict-origin-when-cross-origin".to_string(),
             permissions_policy: "camera=(), microphone=(), geolocation=()".to_string(),
+            // Defaults preserve the previously hardcoded values exactly, so
+            // adding these knobs changes no existing deployment's headers.
+            cross_origin_opener_policy: CrossOriginOpenerPolicy::SameOrigin,
+            cross_origin_embedder_policy: CrossOriginEmbedderPolicy::Credentialless,
+            cross_origin_resource_policy: CrossOriginResourcePolicy::CrossOrigin,
+        }
+    }
+}
+
+#[cfg(test)]
+mod cross_origin_tests {
+    use super::*;
+
+    #[test]
+    fn defaults_preserve_the_previously_hardcoded_values() {
+        let h = SecurityHeaders::default();
+        assert_eq!(
+            h.cross_origin_opener_policy.as_header_value(),
+            "same-origin"
+        );
+        assert_eq!(
+            h.cross_origin_embedder_policy.as_header_value(),
+            "credentialless"
+        );
+        assert_eq!(
+            h.cross_origin_resource_policy.as_header_value(),
+            "cross-origin"
+        );
+    }
+
+    #[test]
+    fn popup_auth_policy_round_trips_from_yaml() {
+        let yaml = "cross_origin_opener_policy: same-origin-allow-popups\n";
+        let h: SecurityHeaders = serde_yaml::from_str(yaml).expect("should parse");
+        assert_eq!(
+            h.cross_origin_opener_policy,
+            CrossOriginOpenerPolicy::SameOriginAllowPopups
+        );
+        assert_eq!(
+            h.cross_origin_opener_policy.as_header_value(),
+            "same-origin-allow-popups"
+        );
+    }
+
+    #[test]
+    fn a_typo_is_a_parse_error_not_a_silent_wrong_header() {
+        // This is the whole point of the enum. As a String field this typo
+        // would have started fine and broken popup login in the browser.
+        let yaml = "cross_origin_opener_policy: same-origin-allow-popup\n";
+        let parsed: Result<SecurityHeaders, _> = serde_yaml::from_str(yaml);
+        assert!(parsed.is_err(), "a misspelled policy must not parse");
+    }
+
+    #[test]
+    fn every_variant_maps_to_its_spec_token() {
+        for (p, want) in [
+            (CrossOriginOpenerPolicy::UnsafeNone, "unsafe-none"),
+            (
+                CrossOriginOpenerPolicy::SameOriginAllowPopups,
+                "same-origin-allow-popups",
+            ),
+            (CrossOriginOpenerPolicy::SameOrigin, "same-origin"),
+        ] {
+            assert_eq!(p.as_header_value(), want);
+        }
+        for (p, want) in [
+            (CrossOriginResourcePolicy::SameSite, "same-site"),
+            (CrossOriginResourcePolicy::SameOrigin, "same-origin"),
+            (CrossOriginResourcePolicy::CrossOrigin, "cross-origin"),
+        ] {
+            assert_eq!(p.as_header_value(), want);
+        }
+    }
+
+    #[test]
+    fn only_full_isolation_breaks_popup_auth() {
+        assert!(CrossOriginOpenerPolicy::SameOrigin.breaks_popup_auth());
+        assert!(!CrossOriginOpenerPolicy::SameOriginAllowPopups.breaks_popup_auth());
+        assert!(!CrossOriginOpenerPolicy::UnsafeNone.breaks_popup_auth());
+    }
+
+    #[test]
+    fn https_redirect_requires_both_intent_and_trust() {
+        // The whole point of collapsing this into one method: an operator who
+        // asks for the redirect but has not declared the proxy trustworthy must
+        // NOT get a security decision driven by a spoofable header.
+        let intent_only = TransportSecurity {
+            require_https: RequireHttps::RedirectForwardedHttp,
+            trust_forwarded_headers: false,
+        };
+        assert!(!intent_only.should_redirect_forwarded_http());
+
+        let trust_only = TransportSecurity {
+            require_https: RequireHttps::Off,
+            trust_forwarded_headers: true,
+        };
+        assert!(!trust_only.should_redirect_forwarded_http());
+
+        let both = TransportSecurity {
+            require_https: RequireHttps::RedirectForwardedHttp,
+            trust_forwarded_headers: true,
+        };
+        assert!(both.should_redirect_forwarded_http());
+    }
+
+    #[test]
+    fn transport_defaults_to_no_redirect() {
+        // A deployment not behind a scheme-reporting proxy would redirect-loop,
+        // so off is the only safe default.
+        let t = TransportSecurity::default();
+        assert_eq!(t.require_https, RequireHttps::Off);
+        assert!(!t.trust_forwarded_headers);
+        assert!(!t.should_redirect_forwarded_http());
+    }
+
+    #[test]
+    fn require_https_parses_from_kebab_yaml() {
+        let yaml = "require_https: redirect-forwarded-http\ntrust_forwarded_headers: true\n";
+        let t: TransportSecurity = serde_yaml::from_str(yaml).expect("should parse");
+        assert!(t.should_redirect_forwarded_http());
+    }
+
+    #[test]
+    fn a_misspelled_require_https_is_a_parse_error() {
+        let yaml = "require_https: redirect-forwarded-https\n";
+        let parsed: Result<TransportSecurity, _> = serde_yaml::from_str(yaml);
+        assert!(parsed.is_err(), "a misspelled mode must not parse");
+    }
+
+    #[test]
+    fn header_values_are_all_valid_header_values() {
+        // as_header_value feeds HeaderValue::from_static, which panics on an
+        // invalid value. Prove every variant is safe there.
+        for v in [
+            CrossOriginOpenerPolicy::UnsafeNone.as_header_value(),
+            CrossOriginOpenerPolicy::SameOriginAllowPopups.as_header_value(),
+            CrossOriginOpenerPolicy::SameOrigin.as_header_value(),
+            CrossOriginEmbedderPolicy::UnsafeNone.as_header_value(),
+            CrossOriginEmbedderPolicy::Credentialless.as_header_value(),
+            CrossOriginEmbedderPolicy::RequireCorp.as_header_value(),
+            CrossOriginResourcePolicy::SameSite.as_header_value(),
+            CrossOriginResourcePolicy::SameOrigin.as_header_value(),
+            CrossOriginResourcePolicy::CrossOrigin.as_header_value(),
+        ] {
+            let _ = http::HeaderValue::from_static(v);
         }
     }
 }

@@ -105,27 +105,27 @@ pub async fn security_headers(
         HeaderValue::from_static("1; mode=block"),
     );
 
-    // Cross-Origin-Opener-Policy (COOP) - Isolate browsing context
-    // Prevents cross-origin attacks via window.opener
+    // Cross-origin isolation trio (COOP / COEP / CORP).
+    //
+    // These were hardcoded. They are now typed config, because the choice is
+    // deployment-specific and getting it wrong is not a subtle degradation:
+    // COOP `same-origin` severs window.opener, which breaks a popup-based
+    // OAuth/PKCE login outright. The values are closed sets in the spec, so the
+    // config carries enums and a typo fails at startup rather than at login.
+    // `as_header_value()` returns &'static str, so this is still the
+    // allocation-free from_static path the rest of this function uses.
+    let cross_origin = &state.config.security.headers;
     headers.insert(
         http::HeaderName::from_static("cross-origin-opener-policy"),
-        HeaderValue::from_static("same-origin"),
+        HeaderValue::from_static(cross_origin.cross_origin_opener_policy.as_header_value()),
     );
-
-    // Cross-Origin-Embedder-Policy (COEP) - Allow cross-origin resources without credentials
-    // credentialless: Allows resources like Stripe.js without requiring CORP headers
-    // More permissive than require-corp but still maintains security by not sending credentials
     headers.insert(
         http::HeaderName::from_static("cross-origin-embedder-policy"),
-        HeaderValue::from_static("credentialless"),
+        HeaderValue::from_static(cross_origin.cross_origin_embedder_policy.as_header_value()),
     );
-
-    // Cross-Origin-Resource-Policy (CORP) - Allow cross-origin resource loading
-    // Set to cross-origin to work with COEP: credentialless
-    // This allows our resources to be loaded by external scripts/services
     headers.insert(
         http::HeaderName::from_static("cross-origin-resource-policy"),
-        HeaderValue::from_static("cross-origin"),
+        HeaderValue::from_static(cross_origin.cross_origin_resource_policy.as_header_value()),
     );
 
     // X-DNS-Prefetch-Control - Disable DNS prefetching to prevent privacy leaks
@@ -538,5 +538,68 @@ mod tests {
         // Invalid regex should return false gracefully
         let result = is_hashed_asset("/assets/main.js", "[invalid(regex");
         assert!(!result);
+    }
+}
+
+/// Redirect a request that the trusted proxy says arrived over plain HTTP.
+///
+/// The service never terminates TLS itself, so `X-Forwarded-Proto` is the only
+/// evidence of the original scheme. That header is trivially spoofable by a
+/// direct client, which is why this consults
+/// `should_redirect_forwarded_http()` — it is gated on
+/// `trust_forwarded_headers`, so the redirect is only ever driven by a header
+/// the operator has declared trustworthy.
+///
+/// Emits 301 rather than 302 so browsers and HSTS preload treat it as
+/// permanent. The Host header supplies the authority; the path and query are
+/// preserved verbatim.
+pub async fn https_redirect(
+    State(state): State<Arc<AppState>>,
+    req: Request,
+    next: Next,
+) -> Response {
+    if !state.config.security.transport.should_redirect_forwarded_http() {
+        return next.run(req).await;
+    }
+
+    let forwarded_proto = req
+        .headers()
+        .get("x-forwarded-proto")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.trim().to_ascii_lowercase());
+
+    if forwarded_proto.as_deref() != Some("http") {
+        return next.run(req).await;
+    }
+
+    let host = req
+        .headers()
+        .get(header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+
+    let Some(host) = host else {
+        // No Host, no authority to redirect to. Serving the request is safer
+        // than emitting a Location the client cannot resolve.
+        return next.run(req).await;
+    };
+
+    let path_and_query = req
+        .uri()
+        .path_and_query()
+        .map(|pq| pq.as_str().to_owned())
+        .unwrap_or_else(|| "/".to_string());
+
+    let location = format!("https://{host}{path_and_query}");
+
+    match HeaderValue::from_str(&location) {
+        Ok(value) => {
+            let mut response = Response::new(axum::body::Body::empty());
+            *response.status_mut() = http::StatusCode::MOVED_PERMANENTLY;
+            response.headers_mut().insert(header::LOCATION, value);
+            response
+        }
+        // A Host that cannot form a header value is not something to guess at.
+        Err(_) => next.run(req).await,
     }
 }

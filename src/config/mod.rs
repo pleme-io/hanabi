@@ -45,7 +45,9 @@ pub use metrics::MetricsConfig;
 pub use network::NetworkConfig;
 pub use preflight::PreflightConfig;
 pub use s3::S3Config;
-pub use security::SecurityConfig;
+pub use security::{
+    CrossOriginEmbedderPolicy, CrossOriginOpenerPolicy, CrossOriginResourcePolicy, SecurityConfig,
+};
 pub use server::{ServerConfig, WebappS3Source};
 pub use telemetry::TelemetryConfig;
 
