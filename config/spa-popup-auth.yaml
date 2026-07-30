@@ -1,6 +1,13 @@
 environment: production
 
-# Scoped hanabi profile for serving the akeyless web-ui SPA, replacing nginx.
+# Scoped hanabi profile: serve a static SPA whose login is a POPUP, replacing
+# nginx, on a distroless image.
+#
+# This is the reference profile for the one configuration that is easy to get
+# wrong and expensive to get wrong: a popup-based OAuth/PKCE flow. hanabi's
+# default COOP is same-origin, which severs window.opener and breaks that login
+# outright, so a deployment of this shape MUST override it. Everything else here
+# is the least-functionality posture that follows.
 #
 # SCOPE FIRST. hanabi is a federation BFF that also serves static files. For this
 # use case it serves static files and nothing else, so every other subsystem is
@@ -8,21 +15,21 @@ environment: production
 # is reachable attack surface that this deployment has no use for. Least
 # functionality by construction, not by convention.
 #
-# The header values below are not invented. They reproduce what the nginx image
-# actually sends today, read off a running container, so swapping the server does
-# not silently change the security posture of the page.
+# The header values are the posture a hardened nginx SPA image ships today, so
+# swapping the server does not silently change the security posture of the page.
 
 server:
   # /usr/share/nginx/html even though there is no nginx here. The saas chart
-  # mounts its env-config.js ConfigMap subPath into this exact directory, so the
-  # path is a contract the chart owns, not a preference. Serving elsewhere loses
-  # the tenant's runtime config and looks like an app bug.
+  # A Kubernetes chart written for nginx commonly mounts a runtime-config
+  # ConfigMap subPath into this exact directory, so the path is a contract the
+  # chart owns rather than a preference. Serving from elsewhere silently loses
+  # that config and presents as an application bug.
   static_dir: /usr/share/nginx/html
-  # The chart hardcodes containerPort 80 and probes port 80. 80 is privileged, so
-  # a non-root server cannot bind it without NET_BIND_SERVICE. See the note in
-  # the akeyless PR: this lane needs either that capability or a chart change;
-  # 8000 here is the non-root-safe value and the mismatch is deliberate and
-  # tracked rather than silently papered over.
+  # A chart written for nginx-as-root commonly hardcodes containerPort 80 and
+  # probes it. 80 is privileged, so a non-root server cannot bind it without
+  # NET_BIND_SERVICE. 8000 is the non-root-safe value; reconciling it needs
+  # either that capability or a chart change, and stating the mismatch here is
+  # better than papering over it.
   http_port: 8000
   # REQUIRED and must differ from http_port. Both default to 0 and validate()
   # rejects 0 for either, plus rejects them being equal. Omitting this does not
@@ -31,7 +38,7 @@ server:
   # the SPA. Green probes, wrong content, no crashloop to investigate.
   health_port: 8080
   bind_address: 0.0.0.0
-  service_name: web-ui
+  service_name: spa
 
 features:
   enable_bff: false
@@ -79,8 +86,7 @@ security:
     # list exists for the env-config fetch, which nginx handled with a
     # $http_origin map.
     allowed_origins:
-      - https://console.akeyless.io
-      - https://console.akeyless.dev
+      - https://console.example.com
     allow_credentials: false
     max_age_secs: 3600
     additional_allowed_headers: []
@@ -92,17 +98,13 @@ security:
     api_domains: []
     ws_domains: []
 
+    # Every origin the SPA actually calls. Keep this list closed: a wildcard
+    # here is the difference between a CSP and a decoration.
     additional_connect_src:
-      - "*.akeyless.io"
-      - "*.akeyless.dev"
-      - https://sfs.akeyless-security.com
+      - "*.example.com"
       - https://*.s3.us-east-2.amazonaws.com
-      - https://changelog.akeyless.io
-      - https://raw.githubusercontent.com
-      - https://*.browser-intake-datadoghq.com
 
     script_sources:
-      - https://app.getbeamer.com
       - https://www.googletagmanager.com
 
     style_sources:

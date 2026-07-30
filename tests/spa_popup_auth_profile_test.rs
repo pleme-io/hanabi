@@ -1,19 +1,19 @@
-//! The scoped akeyless web-ui profile is a security artifact, so it is tested
-//! like one.
+//! config/spa-popup-auth.yaml is a security artifact, so it is tested like one.
 //!
-//! config/akeyless-web-ui.yaml replaces an nginx.conf whose header set was read
-//! off a running container. These assertions pin the properties that must not
-//! drift when the server underneath changes, and in particular the COOP value:
-//! hanabi's default severs window.opener, which breaks popup sign-in, so the
-//! profile has to override it and this test is what keeps that override honest.
+//! It is the reference profile for serving a static SPA whose login is a POPUP.
+//! These assertions pin the properties that must not drift, and in particular
+//! the COOP value: hanabi's default severs window.opener, which breaks popup
+//! sign-in outright, so the profile has to override it and this test is what
+//! keeps that override honest. A deployment-specific profile is expected to
+//! live in the deploying repo, not here; this one exists to prove the knobs.
 
 use hanabi::config::{
     AppConfig, CrossOriginEmbedderPolicy, CrossOriginOpenerPolicy, CrossOriginResourcePolicy,
 };
 
 fn profile() -> AppConfig {
-    let raw = std::fs::read_to_string("config/akeyless-web-ui.yaml")
-        .expect("the scoped profile must exist at config/akeyless-web-ui.yaml");
+    let raw = std::fs::read_to_string("config/spa-popup-auth.yaml")
+        .expect("the reference profile must exist at config/spa-popup-auth.yaml");
     serde_yaml::from_str(&raw).expect("the scoped profile must parse into AppConfig")
 }
 
@@ -125,11 +125,7 @@ fn csp_image_sources_are_not_a_wildcard() {
 #[test]
 fn csp_connect_src_carries_the_real_backend_origins() {
     let c = profile();
-    for required in [
-        "*.akeyless.io",
-        "https://sfs.akeyless-security.com",
-        "https://changelog.akeyless.io",
-    ] {
+    for required in ["*.example.com"] {
         assert!(
             c.security
                 .csp
@@ -195,7 +191,7 @@ fn the_profile_actually_loads_through_hanabis_own_loader() {
     // that one path redirected at a temp dir. Every other field, and the whole
     // validate() gate, is the real thing. static_dir's real value is asserted
     // separately by static_dir_is_the_path_the_chart_mounts_into.
-    let raw = std::fs::read_to_string("config/akeyless-web-ui.yaml").expect("profile must exist");
+    let raw = std::fs::read_to_string("config/spa-popup-auth.yaml").expect("profile must exist");
     let tmp = std::env::temp_dir().join("hanabi-profile-test-static");
     std::fs::create_dir_all(&tmp).expect("temp static dir");
     let redirected = raw.replace(
