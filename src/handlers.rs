@@ -448,11 +448,7 @@ pub async fn telemetry(
                 // Also emit to StatsD (backwards compatibility)
                 state.incr(
                     "frontend.events",
-                    &[
-                        ("product", product),
-                        ("name", &event.name),
-                        ("page", &page),
-                    ],
+                    &[("product", product), ("name", &event.name), ("page", &page)],
                 );
             }
 
@@ -498,11 +494,7 @@ pub async fn telemetry(
                 // Also emit to StatsD (backwards compatibility)
                 state.incr(
                     "frontend.errors",
-                    &[
-                        ("product", product),
-                        ("name", &event.name),
-                        ("page", &page),
-                    ],
+                    &[("product", product), ("name", &event.name), ("page", &page)],
                 );
             }
 
@@ -534,8 +526,8 @@ pub async fn telemetry(
     }
 
     // Get namespace for Prometheus
-    let namespace = std::env::var("POD_NAMESPACE")
-        .unwrap_or_else(|_| format!("{}-staging", product));
+    let namespace =
+        std::env::var("POD_NAMESPACE").unwrap_or_else(|_| format!("{}-staging", product));
 
     // Record to Prometheus
     prometheus::record_telemetry_received(&namespace, product, event_count as u64);
@@ -864,7 +856,10 @@ pub async fn geolocation(
                 acquired_lock = true;
             } else {
                 // Lock is held by another request - wait briefly then check cache again
-                info!("Geolocation lock held for IP {}, waiting for result", client_ip);
+                info!(
+                    "Geolocation lock held for IP {}, waiting for result",
+                    client_ip
+                );
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
                 // Check cache again after waiting
@@ -890,7 +885,10 @@ pub async fn geolocation(
         }
     }
 
-    info!("Geolocation cache miss for IP: {} (lock: {})", client_ip, acquired_lock);
+    info!(
+        "Geolocation cache miss for IP: {} (lock: {})",
+        client_ip, acquired_lock
+    );
 
     state.incr("geolocation.cache_miss", &[]);
 
@@ -1049,7 +1047,10 @@ pub async fn geolocation(
             // Release lock if we acquired it
             if acquired_lock {
                 if let Err(e) = conn.del::<_, ()>(&lock_key).await {
-                    warn!("Failed to release geolocation lock for {}: {}", client_ip, e);
+                    warn!(
+                        "Failed to release geolocation lock for {}: {}",
+                        client_ip, e
+                    );
                 }
             }
         } else {
@@ -1337,20 +1338,32 @@ mod tests {
     #[test]
     fn test_match_city_to_slug() {
         let cities = vec![
-            GeoCity { slug: "sao-paulo".to_string(), name: "São Paulo".to_string() },
-            GeoCity { slug: "rio-de-janeiro".to_string(), name: "Rio de Janeiro".to_string() },
+            GeoCity {
+                slug: "sao-paulo".to_string(),
+                name: "São Paulo".to_string(),
+            },
+            GeoCity {
+                slug: "rio-de-janeiro".to_string(),
+                name: "Rio de Janeiro".to_string(),
+            },
         ];
 
         // Exact match
         assert_eq!(match_city_to_slug("São Paulo", &cities), Some("sao-paulo"));
-        assert_eq!(match_city_to_slug("Rio de Janeiro", &cities), Some("rio-de-janeiro"));
+        assert_eq!(
+            match_city_to_slug("Rio de Janeiro", &cities),
+            Some("rio-de-janeiro")
+        );
 
         // Case insensitive
         assert_eq!(match_city_to_slug("SÃO PAULO", &cities), Some("sao-paulo"));
         assert_eq!(match_city_to_slug("são paulo", &cities), Some("sao-paulo"));
 
         // Partial match
-        assert_eq!(match_city_to_slug("São Paulo City", &cities), Some("sao-paulo"));
+        assert_eq!(
+            match_city_to_slug("São Paulo City", &cities),
+            Some("sao-paulo")
+        );
 
         // Unknown city
         assert_eq!(match_city_to_slug("Unknown City", &cities), None);

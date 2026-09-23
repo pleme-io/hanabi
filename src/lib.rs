@@ -48,12 +48,12 @@ pub mod router;
 pub use router::{CoreMiddleware, CoreRoute, MiddlewareSlot};
 
 // Extension points and composition
-pub mod traits;
 pub mod builder;
-pub mod server;
 pub mod providers;
+pub mod server;
+pub mod traits;
 
 // Proxy, L4, and service mesh
-pub mod proxy;
 pub mod l4;
 pub mod mesh;
+pub mod proxy;

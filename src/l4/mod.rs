@@ -153,9 +153,16 @@ mod tests {
     async fn test_backend_pool_round_robin() {
         let pool = L4BackendPool::new();
         pool.update(vec![
-            L4Backend { address: "10.0.0.1".to_string(), port: 5432 },
-            L4Backend { address: "10.0.0.2".to_string(), port: 5432 },
-        ]).await;
+            L4Backend {
+                address: "10.0.0.1".to_string(),
+                port: 5432,
+            },
+            L4Backend {
+                address: "10.0.0.2".to_string(),
+                port: 5432,
+            },
+        ])
+        .await;
 
         let b1 = pool.next().await.unwrap();
         let b2 = pool.next().await.unwrap();

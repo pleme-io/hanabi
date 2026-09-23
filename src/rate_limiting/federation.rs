@@ -209,8 +209,10 @@ impl FederationRateLimiter {
                 requests_per_second: limit.requests_per_second,
                 burst_size: burst,
             };
-            operation_limiters
-                .insert(limit.pattern.clone(), Arc::new(RateLimiter::direct(params.to_quota())));
+            operation_limiters.insert(
+                limit.pattern.clone(),
+                Arc::new(RateLimiter::direct(params.to_quota())),
+            );
         }
 
         // Create subgraph limiters using shared QuotaParams
@@ -221,8 +223,10 @@ impl FederationRateLimiter {
                 requests_per_second: limit.requests_per_second,
                 burst_size: burst,
             };
-            subgraph_limiters
-                .insert(limit.subgraph.clone(), Arc::new(RateLimiter::direct(params.to_quota())));
+            subgraph_limiters.insert(
+                limit.subgraph.clone(),
+                Arc::new(RateLimiter::direct(params.to_quota())),
+            );
         }
 
         // Default quota using shared QuotaParams
@@ -292,8 +296,7 @@ impl FederationRateLimiter {
         }
 
         // All checks passed
-        self.metrics
-            .incr("bff.federation.rate_limit.allowed", &[]);
+        self.metrics.incr("bff.federation.rate_limit.allowed", &[]);
 
         RateLimitResult::Allowed
     }

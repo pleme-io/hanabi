@@ -605,7 +605,10 @@ async fn handle_verify_magic_link_response(
     // Store session in Redis
     let mut store = SessionStore::new(redis, config.clone());
     if let Err(e) = store.create(&session).await {
-        error!("Failed to create session after magic link verification: {}", e);
+        error!(
+            "Failed to create session after magic link verification: {}",
+            e
+        );
         return (AuthInterceptResult::PassThrough, response_body);
     }
 
@@ -756,7 +759,10 @@ async fn handle_start_profile_response(
     // Store session in Redis
     let mut store = SessionStore::new(redis, config.clone());
     if let Err(e) = store.create(&session).await {
-        error!("Failed to create session after startProfile (alreadyVerified=true): {}", e);
+        error!(
+            "Failed to create session after startProfile (alreadyVerified=true): {}",
+            e
+        );
         return (AuthInterceptResult::PassThrough, response_body);
     }
 

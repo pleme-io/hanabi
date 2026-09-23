@@ -327,7 +327,8 @@ impl RequestDeduplicator {
                 "Deduplication: cleaned up expired entries"
             );
 
-            self.metrics.count("bff.federation.dedup.expired", expired_count as i64, &[]);
+            self.metrics
+                .count("bff.federation.dedup.expired", expired_count as i64, &[]);
         }
     }
 }
@@ -636,12 +637,7 @@ mod tests {
 
     #[test]
     fn test_dedup_key_no_operation_name() {
-        let key = DeduplicationKey::new(
-            None,
-            "{ anonymous }".to_string(),
-            None,
-            "app".to_string(),
-        );
+        let key = DeduplicationKey::new(None, "{ anonymous }".to_string(), None, "app".to_string());
         let _ = key.hash(); // should not panic
     }
 

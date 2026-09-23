@@ -56,9 +56,7 @@ pub async fn run_degraded(
     };
 
     // App port: every request (any method, any path) → the explicit 503 page.
-    let app_router: Router = Router::new()
-        .fallback(error_page)
-        .with_state(st.clone());
+    let app_router: Router = Router::new().fallback(error_page).with_state(st.clone());
 
     // Health port: live=200, ready/startup=503+reason, metrics flag the state.
     let health_router: Router = Router::new()

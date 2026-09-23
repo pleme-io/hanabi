@@ -31,6 +31,10 @@ mod middleware;
 mod preflight;
 mod prometheus;
 mod providers;
+// ★ Declared here for the first time. `proxy` was `pub mod` in lib.rs but
+// absent from main, so the reverse proxy compiled only into the LIB target —
+// the shipped binary did not contain it, and no config could reach it.
+mod proxy;
 mod rate_limiting;
 mod redis;
 mod request_context;
@@ -45,7 +49,7 @@ use config::AppConfig;
 use preflight::PreflightChecks;
 
 use pleme_notifications::{
-    DependencyStatus, NotificationClient, PodIdentity, StartupReport, PhaseStatus, StartupPhase,
+    DependencyStatus, NotificationClient, PhaseStatus, PodIdentity, StartupPhase, StartupReport,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -158,8 +162,7 @@ async fn async_main(
             pod_identity,
             cluster_name: std::env::var("DISCORD_CLUSTER_NAME")
                 .unwrap_or_else(|_| "unknown".to_string()),
-            environment: std::env::var("ENVIRONMENT")
-                .unwrap_or_else(|_| "unknown".to_string()),
+            environment: std::env::var("ENVIRONMENT").unwrap_or_else(|_| "unknown".to_string()),
             total_duration: std::time::Duration::ZERO,
             phases: vec![StartupPhase {
                 name: "startup".into(),
@@ -191,8 +194,7 @@ async fn async_main(
 
     #[cfg(feature = "instagram-oauth")]
     if config.bff.oauth.enabled {
-        if let Some(p) =
-            providers::instagram_oauth::InstagramOAuth::from_config(&config.bff.oauth)
+        if let Some(p) = providers::instagram_oauth::InstagramOAuth::from_config(&config.bff.oauth)
         {
             sb = sb.with_oauth(p);
         }
@@ -209,9 +211,7 @@ async fn async_main(
 
     #[cfg(feature = "meta-webhooks")]
     if config.bff.webhooks.enabled {
-        if let Some(h) =
-            providers::meta_webhooks::MetaWebhooks::from_config(&config.bff.webhooks)
-        {
+        if let Some(h) = providers::meta_webhooks::MetaWebhooks::from_config(&config.bff.webhooks) {
             sb = sb.with_webhook(h);
         }
     }

@@ -47,7 +47,9 @@ pub mod stripe;
 /// - GET /webhooks/meta - Meta webhook verification challenge (requires `meta-webhooks` feature)
 #[cfg(all(feature = "stripe-webhooks", feature = "meta-webhooks"))]
 #[allow(dead_code)]
-pub fn webhook_routes(state: std::sync::Arc<crate::state::AppState>) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
+pub fn webhook_routes(
+    state: std::sync::Arc<crate::state::AppState>,
+) -> axum::Router<std::sync::Arc<crate::state::AppState>> {
     use axum::routing::{get, post};
     use axum::Router;
     Router::new()

@@ -371,7 +371,8 @@ impl SubscriptionEventBroadcaster {
                         Err(e) => {
                             error!(error = %e, "Failed to publish subscription event to Redis");
 
-                            self.metrics.incr("bff.subscription.redis.publish_error", &[]);
+                            self.metrics
+                                .incr("bff.subscription.redis.publish_error", &[]);
                         }
                     }
                 }

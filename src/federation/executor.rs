@@ -54,7 +54,6 @@ use once_cell::sync::Lazy;
 /// Initialized once, reused for all hash operations. ahash is 2-3x faster than DefaultHasher.
 static AHASH_STATE: Lazy<ahash::RandomState> = Lazy::new(ahash::RandomState::new);
 
-
 use axum::response::IntoResponse;
 use axum::Json;
 use serde_json::{json, Value};
@@ -106,15 +105,15 @@ use super::plugins::{
     TracingPlugin,
 };
 use super::query_planner::QueryPlanner;
-use crate::rate_limiting::{
-    FederationRateLimiter, OperationType, RateLimitConfig, RateLimitContext, RateLimitResult,
-};
 use super::redis_cache::{create_response_cache_with_pressure, TwoTierCache};
 use super::security::{
     ComplexityConfig, DepthLimitConfig, DepthLimiter, IntrospectionConfig, SecurityError,
 };
 use super::supergraph::Supergraph;
 use crate::memory::PressureCoordinator;
+use crate::rate_limiting::{
+    FederationRateLimiter, OperationType, RateLimitConfig, RateLimitContext, RateLimitResult,
+};
 
 use crate::config::FederationPluginsConfig;
 use crate::rate_limiting::DynamicRateLimiter;
@@ -837,7 +836,8 @@ impl FederationExecutor {
                     error = %e,
                     "Federation: Plugin pre-execute hook failed"
                 );
-                self.metrics.incr("federation.plugin.pre_execute.error", &[]);
+                self.metrics
+                    .incr("federation.plugin.pre_execute.error", &[]);
                 // Plugin errors may be fatal depending on configuration
                 return FederationResponse::error(&format!("Plugin error: {}", e));
             }
@@ -1316,7 +1316,8 @@ impl FederationExecutor {
                     error = %e,
                     "Federation: Plugin post-execute hook failed"
                 );
-                self.metrics.incr("federation.plugin.post_execute.error", &[]);
+                self.metrics
+                    .incr("federation.plugin.post_execute.error", &[]);
                 // Post-execute errors are logged but don't fail the response
             }
         }

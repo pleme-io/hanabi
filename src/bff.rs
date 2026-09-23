@@ -1201,7 +1201,11 @@ async fn handle_websocket_proxy(
     };
 
     // Track semaphore pressure before attempting acquisition
-    state.gauge("bff.ws.semaphore.available", semaphore.available_permits() as f64, &[]);
+    state.gauge(
+        "bff.ws.semaphore.available",
+        semaphore.available_permits() as f64,
+        &[],
+    );
 
     let _permit = match semaphore.clone().try_acquire_owned() {
         Ok(permit) => {
@@ -1471,15 +1475,8 @@ async fn handle_websocket_proxy(
                             text.len(),
                             max_message_size
                         );
-                        state_ws.incr(
-                            "bff.ws.proxy.error",
-                            &[("reason", "message_too_large")],
-                        );
-                        state_ws.histogram(
-                            "bff.ws.message.size_rejected",
-                            text.len() as f64,
-                            &[],
-                        );
+                        state_ws.incr("bff.ws.proxy.error", &[("reason", "message_too_large")]);
+                        state_ws.histogram("bff.ws.message.size_rejected", text.len() as f64, &[]);
                         let _ = upstream_tx.send(TungsteniteMessage::Close(Some(
                             tokio_tungstenite::tungstenite::protocol::CloseFrame {
                                 code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Size,
@@ -1516,15 +1513,8 @@ async fn handle_websocket_proxy(
                             data.len(),
                             max_message_size
                         );
-                        state_ws.incr(
-                            "bff.ws.proxy.error",
-                            &[("reason", "message_too_large")],
-                        );
-                        state_ws.histogram(
-                            "bff.ws.message.size_rejected",
-                            data.len() as f64,
-                            &[],
-                        );
+                        state_ws.incr("bff.ws.proxy.error", &[("reason", "message_too_large")]);
+                        state_ws.histogram("bff.ws.message.size_rejected", data.len() as f64, &[]);
                         let _ = upstream_tx.send(TungsteniteMessage::Close(Some(
                             tokio_tungstenite::tungstenite::protocol::CloseFrame {
                                 code: tokio_tungstenite::tungstenite::protocol::frame::coding::CloseCode::Size,
@@ -1715,8 +1705,7 @@ async fn handle_websocket_proxy(
                 }
                 Err(e) => {
                     error!("Error receiving from upstream WebSocket: {}", e);
-                    state_upstream
-                        .incr("bff.ws.proxy.error", &[("reason", "upstream_read_error")]);
+                    state_upstream.incr("bff.ws.proxy.error", &[("reason", "upstream_read_error")]);
                     break;
                 }
             }

@@ -45,8 +45,7 @@ fn profile_overrides_the_defaults_it_needs_to() {
     let c = profile();
     let d = hanabi::config::SecurityConfig::default();
     assert_ne!(
-        c.security.headers.cross_origin_opener_policy,
-        d.headers.cross_origin_opener_policy,
+        c.security.headers.cross_origin_opener_policy, d.headers.cross_origin_opener_policy,
         "the profile exists partly to change COOP; equal to default means lost"
     );
     assert_eq!(

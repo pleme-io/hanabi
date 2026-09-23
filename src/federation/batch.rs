@@ -650,10 +650,8 @@ mod tests {
             EntityRepresentationBuilder::build("User", "id", "2"),
         ];
 
-        let (query, variables) = EntityRepresentationBuilder::build_entities_query(
-            &reps,
-            "id name email",
-        );
+        let (query, variables) =
+            EntityRepresentationBuilder::build_entities_query(&reps, "id name email");
 
         assert!(query.contains("$representations"));
         assert!(query.contains("_entities"));
@@ -666,10 +664,7 @@ mod tests {
 
     #[test]
     fn test_build_entities_query_empty_representations() {
-        let (query, variables) = EntityRepresentationBuilder::build_entities_query(
-            &[],
-            "id",
-        );
+        let (query, variables) = EntityRepresentationBuilder::build_entities_query(&[], "id");
         assert!(query.contains("_entities"));
         assert_eq!(variables["representations"].as_array().unwrap().len(), 0);
     }
@@ -706,9 +701,7 @@ mod tests {
     #[tokio::test]
     async fn test_batcher_load_error() {
         let loader = |_keys: Vec<String>| {
-            Box::pin(async move {
-                Err(BatchError::new("loader failed"))
-            })
+            Box::pin(async move { Err(BatchError::new("loader failed")) })
                 as Pin<Box<dyn Future<Output = Result<HashMap<String, String>, BatchError>> + Send>>
         };
 

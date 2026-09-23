@@ -85,9 +85,17 @@ impl PlatformSettingsResponse {
         let defaults = DynamicRateLimitConfig::default();
         DynamicRateLimitConfig {
             bff_enabled: self.rate_limit_bff_enabled.unwrap_or(defaults.bff_enabled),
-            bff_rps: self.rate_limit_bff_rps.map(|v| v as u32).unwrap_or(defaults.bff_rps),
-            bff_burst: self.rate_limit_bff_burst.map(|v| v as u32).unwrap_or(defaults.bff_burst),
-            federation_enabled: self.rate_limit_fed_enabled.unwrap_or(defaults.federation_enabled),
+            bff_rps: self
+                .rate_limit_bff_rps
+                .map(|v| v as u32)
+                .unwrap_or(defaults.bff_rps),
+            bff_burst: self
+                .rate_limit_bff_burst
+                .map(|v| v as u32)
+                .unwrap_or(defaults.bff_burst),
+            federation_enabled: self
+                .rate_limit_fed_enabled
+                .unwrap_or(defaults.federation_enabled),
             federation_default_rps: self
                 .rate_limit_fed_default_rps
                 .map(|v| v as u32)
@@ -127,10 +135,7 @@ async fn fetch_platform_settings(
         return Err(format!(
             "Backend returned status {}: {}",
             response.status(),
-            response
-                .text()
-                .await
-                .unwrap_or_else(|_| "unknown".into())
+            response.text().await.unwrap_or_else(|_| "unknown".into())
         ));
     }
 

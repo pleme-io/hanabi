@@ -24,7 +24,9 @@ impl Default for NetworkConfig {
             http_backlog: 1024,
             health_backlog: 128,
             reuse_address: true,
-            hashed_asset_pattern: r"/assets/.+-[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$".to_string(),
+            hashed_asset_pattern:
+                r"/assets/.+-[a-f0-9]{8,}\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico)$"
+                    .to_string(),
         }
     }
 }

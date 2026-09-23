@@ -288,7 +288,8 @@ impl ResponseCache {
                 max_size = self.config.max_entry_size,
                 "Skipping cache (response too large)"
             );
-            self.metrics.incr("bff.federation.cache.skip_too_large", &[]);
+            self.metrics
+                .incr("bff.federation.cache.skip_too_large", &[]);
             return;
         }
 
@@ -353,7 +354,8 @@ impl ResponseCache {
     pub async fn invalidate_all(&self) {
         self.cache.invalidate_all();
 
-        self.metrics.incr("bff.federation.cache.invalidate_all", &[]);
+        self.metrics
+            .incr("bff.federation.cache.invalidate_all", &[]);
 
         info!("Invalidated all cache entries");
     }
@@ -635,9 +637,7 @@ mod tests {
             "app".to_string(),
         );
 
-        cache
-            .set(&key, serde_json::json!({"data": {"x": 1}}))
-            .await;
+        cache.set(&key, serde_json::json!({"data": {"x": 1}})).await;
         assert!(cache.get(&key).await.is_none());
     }
 
@@ -849,12 +849,7 @@ mod tests {
 
     #[test]
     fn test_cache_key_no_operation_name() {
-        let key = CacheKey::new(
-            None,
-            "{ anonymous }".to_string(),
-            None,
-            "app".to_string(),
-        );
+        let key = CacheKey::new(None, "{ anonymous }".to_string(), None, "app".to_string());
         let _ = key.hash(); // should not panic
     }
 

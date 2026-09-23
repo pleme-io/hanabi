@@ -26,9 +26,15 @@ pub struct CircuitBreakerConfig {
     pub success_threshold: u32,
 }
 
-fn default_failure_threshold() -> u32 { 5 }
-fn default_reset_timeout() -> u64 { 30 }
-fn default_success_threshold() -> u32 { 2 }
+fn default_failure_threshold() -> u32 {
+    5
+}
+fn default_reset_timeout() -> u64 {
+    30
+}
+fn default_success_threshold() -> u32 {
+    2
+}
 
 impl Default for CircuitBreakerConfig {
     fn default() -> Self {
@@ -92,9 +98,7 @@ impl CircuitBreaker {
         let successes = self.consecutive_successes.fetch_add(1, Ordering::Relaxed) + 1;
 
         let mut state = self.state.write().await;
-        if *state == CircuitState::HalfOpen
-            && successes >= self.config.success_threshold as u64
-        {
+        if *state == CircuitState::HalfOpen && successes >= self.config.success_threshold as u64 {
             debug!("circuit breaker closing");
             *state = CircuitState::Closed;
         }
@@ -141,10 +145,18 @@ pub struct RetryConfig {
     pub max_backoff_ms: u64,
 }
 
-fn default_max_retries() -> u32 { 3 }
-fn default_initial_backoff() -> u64 { 100 }
-fn default_multiplier() -> f64 { 2.0 }
-fn default_max_backoff() -> u64 { 5000 }
+fn default_max_retries() -> u32 {
+    3
+}
+fn default_initial_backoff() -> u64 {
+    100
+}
+fn default_multiplier() -> f64 {
+    2.0
+}
+fn default_max_backoff() -> u64 {
+    5000
+}
 
 impl Default for RetryConfig {
     fn default() -> Self {

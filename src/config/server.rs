@@ -291,8 +291,14 @@ no_static: true
 "#;
         let cfg: ServerConfig = serde_yaml::from_str(yaml).unwrap();
         assert!(cfg.is_sidecar());
-        assert_eq!(cfg.upstream_loopback.as_deref(), Some("http://127.0.0.1:8082"));
-        assert_eq!(cfg.policy_source.as_deref(), Some("/etc/hanabi/policy.yaml"));
+        assert_eq!(
+            cfg.upstream_loopback.as_deref(),
+            Some("http://127.0.0.1:8082")
+        );
+        assert_eq!(
+            cfg.policy_source.as_deref(),
+            Some("/etc/hanabi/policy.yaml")
+        );
         assert!(cfg.no_static);
     }
 }

@@ -35,8 +35,8 @@ impl Default for GeolocationConfig {
             enabled: false,
             api_url_template: "http://ip-api.com/json/{ip}?fields=status,city,regionName"
                 .to_string(),
-            cache_ttl_secs: 86400,          // 24 hours
-            failed_cache_ttl_secs: 3600,    // 1 hour
+            cache_ttl_secs: 86400,       // 24 hours
+            failed_cache_ttl_secs: 3600, // 1 hour
             rate_limit_per_minute: 10,
             cities: Vec::new(),
         }

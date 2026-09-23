@@ -485,15 +485,23 @@ mod tests {
     #[test]
     fn test_check_result_time_is_rfc3339() {
         let result = CheckResult::pass("test", "component");
-        chrono::DateTime::parse_from_rfc3339(&result.time)
-            .expect("time should be valid RFC3339");
+        chrono::DateTime::parse_from_rfc3339(&result.time).expect("time should be valid RFC3339");
     }
 
     #[test]
     fn test_health_status_serialization() {
-        assert_eq!(serde_json::to_string(&HealthStatus::Pass).unwrap(), "\"pass\"");
-        assert_eq!(serde_json::to_string(&HealthStatus::Fail).unwrap(), "\"fail\"");
-        assert_eq!(serde_json::to_string(&HealthStatus::Warn).unwrap(), "\"warn\"");
+        assert_eq!(
+            serde_json::to_string(&HealthStatus::Pass).unwrap(),
+            "\"pass\""
+        );
+        assert_eq!(
+            serde_json::to_string(&HealthStatus::Fail).unwrap(),
+            "\"fail\""
+        );
+        assert_eq!(
+            serde_json::to_string(&HealthStatus::Warn).unwrap(),
+            "\"warn\""
+        );
     }
 
     #[test]
@@ -556,8 +564,8 @@ mod tests {
 
     #[test]
     fn test_check_result_serialization_field_names() {
-        let result = CheckResult::pass("disk", "storage")
-            .with_observed(serde_json::json!(50.0), "percent");
+        let result =
+            CheckResult::pass("disk", "storage").with_observed(serde_json::json!(50.0), "percent");
         let json = serde_json::to_value(&result).unwrap();
         assert_eq!(json["componentId"], "disk");
         assert_eq!(json["componentType"], "storage");

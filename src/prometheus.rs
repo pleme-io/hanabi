@@ -309,7 +309,14 @@ mod tests {
     #[test]
     fn test_record_web_vital_lcp() {
         // Record a good LCP value (2000ms = 2s)
-        record_web_vital("LCP", 2000.0, "good", "test-staging", "test-product", "/home");
+        record_web_vital(
+            "LCP",
+            2000.0,
+            "good",
+            "test-staging",
+            "test-product",
+            "/home",
+        );
 
         // Verify metric was recorded (we can't easily check the value, but this shouldn't panic)
     }
@@ -317,7 +324,14 @@ mod tests {
     #[test]
     fn test_record_web_vital_cls() {
         // Record a CLS value (unitless, should not be divided by 1000)
-        record_web_vital("CLS", 0.05, "good", "test-staging", "test-product", "/products");
+        record_web_vital(
+            "CLS",
+            0.05,
+            "good",
+            "test-staging",
+            "test-product",
+            "/products",
+        );
     }
 
     #[test]

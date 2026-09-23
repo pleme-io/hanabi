@@ -184,7 +184,8 @@ impl CostAnalyzer {
         );
 
         if analysis.is_expensive {
-            self.metrics.incr("bff.federation.cost.expensive_queries", &[]);
+            self.metrics
+                .incr("bff.federation.cost.expensive_queries", &[]);
         }
 
         // Enforce limit

@@ -558,7 +558,12 @@ pub async fn https_redirect(
     req: Request,
     next: Next,
 ) -> Response {
-    if !state.config.security.transport.should_redirect_forwarded_http() {
+    if !state
+        .config
+        .security
+        .transport
+        .should_redirect_forwarded_http()
+    {
         return next.run(req).await;
     }
 

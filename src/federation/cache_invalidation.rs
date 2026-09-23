@@ -513,12 +513,14 @@ impl CacheInvalidator {
                                 "Published invalidation event to Redis"
                             );
 
-                            self.metrics.incr("bff.cache.invalidation.redis.event_published", &[]);
+                            self.metrics
+                                .incr("bff.cache.invalidation.redis.event_published", &[]);
                         }
                         Err(e) => {
                             error!(error = %e, "Failed to publish invalidation event to Redis");
 
-                            self.metrics.incr("bff.cache.invalidation.redis.publish_error", &[]);
+                            self.metrics
+                                .incr("bff.cache.invalidation.redis.publish_error", &[]);
                         }
                     }
                 }

@@ -55,7 +55,9 @@ pub fn is_verify_mfa_login_mutation(
     operation_name: Option<&str>,
     compiled: &CompiledAuthInterception,
 ) -> bool {
-    compiled.mfa_verify.matches(operation_name.unwrap_or(""), query)
+    compiled
+        .mfa_verify
+        .matches(operation_name.unwrap_or(""), query)
 }
 
 /// Rewrite a login mutation to include BFF-required fields
@@ -235,12 +237,8 @@ fn add_bff_fields_to_login(query: &str, compiled: &CompiledAuthInterception) -> 
                         );
                     } else {
                         // Original behavior for simple login responses
-                        result = add_bff_fields_to_simple_login(
-                            &result,
-                            selection_start,
-                            end,
-                            compiled,
-                        );
+                        result =
+                            add_bff_fields_to_simple_login(&result, selection_start, end, compiled);
                     }
                 }
 
@@ -305,8 +303,7 @@ fn add_bff_fields_to_login_response_fragment(
                 }
 
                 // Check if user field exists and has id
-                let needs_user_id =
-                    check_needs_user_id(fragment_selection, &mut fields_to_add);
+                let needs_user_id = check_needs_user_id(fragment_selection, &mut fields_to_add);
 
                 if !fields_to_add.is_empty() || needs_user_id {
                     let injection = if fields_to_add.is_empty() {
@@ -381,9 +378,7 @@ fn check_needs_user_id(selection: &str, fields_to_add: &mut Vec<&str>) -> bool {
                 if let Some(user_end) = find_matching_brace(selection, user_start + user_brace) {
                     let user_selection = &selection[user_selection_start..user_end];
                     return !user_selection.split_whitespace().any(|word| {
-                        word == FIELD_ID
-                            || word.starts_with("id ")
-                            || word.starts_with("id\n")
+                        word == FIELD_ID || word.starts_with("id ") || word.starts_with("id\n")
                     });
                 }
                 return true;
@@ -476,7 +471,11 @@ mod tests {
             None,
             &c,
         ));
-        assert!(!is_login_mutation("query GetUser { user { id } }", None, &c));
+        assert!(!is_login_mutation(
+            "query GetUser { user { id } }",
+            None,
+            &c
+        ));
         assert!(!is_login_mutation(
             "mutation CreateUser { createUser { id } }",
             None,

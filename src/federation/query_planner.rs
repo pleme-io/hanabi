@@ -1919,8 +1919,7 @@ mod tests {
         "#;
 
         // Parse the query using hive-router's parser (graphql_tools) for type compatibility
-        let parsed_query = safe_parse_operation(query_str)
-            .expect("Failed to parse query");
+        let parsed_query = safe_parse_operation(query_str).expect("Failed to parse query");
 
         // Normalize the operation
         let start = std::time::Instant::now();

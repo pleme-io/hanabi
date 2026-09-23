@@ -257,9 +257,7 @@ fn verify_meta_signature(payload: &[u8], signature: &str, secret: &str) -> bool 
 
 /// Forward WhatsApp webhook to Hive Router as GraphQL mutation
 async fn forward_whatsapp_webhook(state: &AppState, raw_payload: &[u8]) -> Result<(), String> {
-    let client = state
-        .http_client()
-        .ok_or("HTTP client not initialized")?;
+    let client = state.http_client().ok_or("HTTP client not initialized")?;
 
     let mutation = r#"
         mutation ProcessWhatsAppWebhook($input: MetaWebhookInput!) {
@@ -316,9 +314,7 @@ async fn forward_whatsapp_webhook(state: &AppState, raw_payload: &[u8]) -> Resul
 
 /// Forward Instagram webhook to Hive Router as GraphQL mutation
 async fn forward_instagram_webhook(state: &AppState, raw_payload: &[u8]) -> Result<(), String> {
-    let client = state
-        .http_client()
-        .ok_or("HTTP client not initialized")?;
+    let client = state.http_client().ok_or("HTTP client not initialized")?;
 
     let mutation = r#"
         mutation ProcessInstagramWebhook($input: MetaWebhookInput!) {

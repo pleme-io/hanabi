@@ -562,10 +562,7 @@ mod tests {
         assert!(json["errors"].is_array());
         assert_eq!(json["errors"][0]["message"], "Resource not found");
         assert_eq!(json["errors"][0]["extensions"]["code"], "NOT_FOUND");
-        assert_eq!(
-            json["errors"][0]["extensions"]["details"],
-            "/missing/page"
-        );
+        assert_eq!(json["errors"][0]["extensions"]["details"], "/missing/page");
     }
 
     #[test]
@@ -679,8 +676,7 @@ mod tests {
     #[test]
     fn test_requires_circuit_break_for_degraded() {
         assert!(AppError::internal("err").requires_circuit_break());
-        let custom =
-            AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "RANDOM_CODE", "random");
+        let custom = AppError::new(StatusCode::INTERNAL_SERVER_ERROR, "RANDOM_CODE", "random");
         assert!(custom.requires_circuit_break());
     }
 

@@ -37,7 +37,7 @@ pub use dynamic::{DynamicRateLimitConfig, DynamicRateLimiter};
 pub use exemption::{decode_user_claims, UserClaims};
 #[allow(unused_imports)]
 pub use federation::{
-    FederationRateLimiter, OperationType, RateLimitConfig, RateLimitContext, RateLimitResult,
-    RateLimitErrorResponse,
+    FederationRateLimiter, OperationType, RateLimitConfig, RateLimitContext,
+    RateLimitErrorResponse, RateLimitResult,
 };
 pub use sync::spawn_rate_limit_config_subscriber;

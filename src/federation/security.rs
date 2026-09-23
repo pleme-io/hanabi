@@ -133,7 +133,8 @@ impl DepthLimiter {
         };
 
         if depth > effective_limit {
-            self.metrics.incr("bff.federation.security.depth_exceeded", &[]);
+            self.metrics
+                .incr("bff.federation.security.depth_exceeded", &[]);
             warn!(
                 depth = depth,
                 max_depth = max_depth,
@@ -146,7 +147,8 @@ impl DepthLimiter {
             });
         }
 
-        self.metrics.histogram("bff.federation.security.query_depth", depth as f64, &[]);
+        self.metrics
+            .histogram("bff.federation.security.query_depth", depth as f64, &[]);
 
         debug!(
             depth = depth,
@@ -277,7 +279,8 @@ impl ComplexityAnalyzer {
         let complexity = self.calculate_complexity(query)?;
 
         if complexity > self.config.max_complexity {
-            self.metrics.incr("bff.federation.security.complexity_exceeded", &[]);
+            self.metrics
+                .incr("bff.federation.security.complexity_exceeded", &[]);
             warn!(
                 complexity = complexity,
                 max_complexity = self.config.max_complexity,
@@ -476,7 +479,8 @@ impl IntrospectionController {
         }
 
         // Introspection blocked
-        self.metrics.incr("bff.federation.security.introspection_blocked", &[]);
+        self.metrics
+            .incr("bff.federation.security.introspection_blocked", &[]);
         info!(
             client_ip = client_ip.unwrap_or("unknown"),
             "Introspection query blocked"
@@ -570,7 +574,8 @@ impl SecurityValidator {
             None
         };
 
-        self.metrics.incr("bff.federation.security.validation_passed", &[]);
+        self.metrics
+            .incr("bff.federation.security.validation_passed", &[]);
 
         Ok(SecurityValidationResult {
             depth,

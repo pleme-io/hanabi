@@ -98,9 +98,7 @@ impl CompiledAuthInterception {
         }
     }
 
-    fn compile_matcher(
-        matcher: &MutationMatcher,
-    ) -> CompiledMatcher {
+    fn compile_matcher(matcher: &MutationMatcher) -> CompiledMatcher {
         CompiledMatcher {
             op_prefixes: matcher
                 .operation_prefixes
@@ -113,9 +111,7 @@ impl CompiledAuthInterception {
         }
     }
 
-    fn compile_logout(
-        matcher: &MutationMatcher,
-    ) -> CompiledMatcher {
+    fn compile_logout(matcher: &MutationMatcher) -> CompiledMatcher {
         let mut compiled = Self::compile_matcher(matcher);
         // Default behavior: exact match on "logout" and "logoutmutation"
         if compiled.op_exact.is_empty()
@@ -127,9 +123,7 @@ impl CompiledAuthInterception {
         compiled
     }
 
-    fn compile_mfa_verify(
-        matcher: &MutationMatcher,
-    ) -> CompiledMatcher {
+    fn compile_mfa_verify(matcher: &MutationMatcher) -> CompiledMatcher {
         let mut compiled = Self::compile_matcher(matcher);
         if compiled.op_exact.is_empty()
             && compiled.op_prefixes.is_empty()
@@ -143,9 +137,7 @@ impl CompiledAuthInterception {
         compiled
     }
 
-    fn compile_magic_link(
-        matcher: &MutationMatcher,
-    ) -> CompiledMatcher {
+    fn compile_magic_link(matcher: &MutationMatcher) -> CompiledMatcher {
         let mut compiled = Self::compile_matcher(matcher);
         if compiled.op_exact.is_empty()
             && compiled.op_prefixes.is_empty()
@@ -159,9 +151,7 @@ impl CompiledAuthInterception {
         compiled
     }
 
-    fn compile_start_profile(
-        matcher: &MutationMatcher,
-    ) -> CompiledMatcher {
+    fn compile_start_profile(matcher: &MutationMatcher) -> CompiledMatcher {
         let mut compiled = Self::compile_matcher(matcher);
         if compiled.op_exact.is_empty()
             && compiled.op_prefixes.is_empty()
@@ -269,9 +259,10 @@ mod tests {
     #[test]
     fn magic_link_by_query_pattern() {
         let c = default_compiled();
-        assert!(c
-            .magic_link
-            .matches("", "mutation VerifyMagicLink { verifyMagicLink(token: $t) }"));
+        assert!(c.magic_link.matches(
+            "",
+            "mutation VerifyMagicLink { verifyMagicLink(token: $t) }"
+        ));
         assert!(c
             .magic_link
             .matches("", "mutation VerifyProviderMagicLink { ... }"));

@@ -39,19 +39,27 @@ pub trait MetricsExt {
 impl MetricsExt for Option<Arc<MetricsClient>> {
     #[inline]
     fn incr(&self, name: &str, tags: &[(&str, &str)]) {
-        if let Some(ref m) = self { m.increment(name, tags); }
+        if let Some(ref m) = self {
+            m.increment(name, tags);
+        }
     }
     #[inline]
     fn gauge(&self, name: &str, value: f64, tags: &[(&str, &str)]) {
-        if let Some(ref m) = self { m.gauge(name, value, tags); }
+        if let Some(ref m) = self {
+            m.gauge(name, value, tags);
+        }
     }
     #[inline]
     fn histogram(&self, name: &str, value: f64, tags: &[(&str, &str)]) {
-        if let Some(ref m) = self { m.histogram(name, value, tags); }
+        if let Some(ref m) = self {
+            m.histogram(name, value, tags);
+        }
     }
     #[inline]
     fn count(&self, name: &str, count: i64, tags: &[(&str, &str)]) {
-        if let Some(ref m) = self { m.count(name, count, tags); }
+        if let Some(ref m) = self {
+            m.count(name, count, tags);
+        }
     }
 }
 
@@ -108,10 +116,7 @@ impl MetricsClient {
 
     /// Build tags string with optional namespace
     fn build_tags(&self, tags: &[(&str, &str)]) -> String {
-        let mut all_tags: Vec<String> = tags
-            .iter()
-            .map(|(k, v)| format!("{}:{}", k, v))
-            .collect();
+        let mut all_tags: Vec<String> = tags.iter().map(|(k, v)| format!("{}:{}", k, v)).collect();
 
         // Add namespace tag if configured
         if let Some(ref ns) = self.namespace {

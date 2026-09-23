@@ -493,12 +493,7 @@ mod tests {
 
     #[test]
     fn test_with_details_none_fields() {
-        let ctx = RequestContext::with_details(
-            Duration::from_secs(10),
-            None,
-            None,
-            String::new(),
-        );
+        let ctx = RequestContext::with_details(Duration::from_secs(10), None, None, String::new());
         assert!(ctx.user_id().is_none());
         assert!(ctx.trace_id().is_none());
         assert_eq!(ctx.product(), "");

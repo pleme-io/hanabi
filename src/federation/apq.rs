@@ -270,7 +270,8 @@ impl ApqCache {
 
         // Validate version
         if persisted_query.version != 1 {
-            self.metrics.incr("bff.federation.apq.version_unsupported", &[]);
+            self.metrics
+                .incr("bff.federation.apq.version_unsupported", &[]);
             return ApqLookupResult::Invalid {
                 message: format!("APQ version {} is not supported", persisted_query.version),
             };

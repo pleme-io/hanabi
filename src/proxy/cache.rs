@@ -119,7 +119,10 @@ mod tests {
 
     #[test]
     fn test_is_cacheable() {
-        assert!(ResponseCache::is_cacheable(200, Some("public, max-age=300")));
+        assert!(ResponseCache::is_cacheable(
+            200,
+            Some("public, max-age=300")
+        ));
         assert!(!ResponseCache::is_cacheable(200, Some("no-store")));
         assert!(!ResponseCache::is_cacheable(200, Some("private")));
         assert!(!ResponseCache::is_cacheable(500, Some("public")));

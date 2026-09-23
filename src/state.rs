@@ -56,7 +56,6 @@ use tokio::sync::Semaphore;
 use tracing::{error, info, warn};
 
 use crate::config::AppConfig;
-use crate::rate_limiting::{DynamicRateLimitConfig, DynamicRateLimiter};
 use crate::federation::{
     BroadcasterConfig, FederationExecutor, FederationExecutorConfig, HotReloadableSupergraph,
     SubscriptionEventBroadcaster, SubscriptionManager, Supergraph,
@@ -64,6 +63,7 @@ use crate::federation::{
 use crate::images::ImageCache;
 use crate::memory::PressureCoordinator;
 use crate::metrics::{MetricsClient, MetricsExt};
+use crate::rate_limiting::{DynamicRateLimitConfig, DynamicRateLimiter};
 use crate::redis::{LazyRedisConfig, LazyRedisPool};
 use crate::resources::ResourceManager;
 
@@ -286,13 +286,17 @@ impl AppState {
     /// Hot-reloadable supergraph (None if federation disabled or hot reload off)
     #[inline]
     pub fn hot_reloadable_supergraph(&self) -> Option<&Arc<HotReloadableSupergraph>> {
-        self.federation.as_ref().and_then(|f| f.hot_reloadable_supergraph.as_ref())
+        self.federation
+            .as_ref()
+            .and_then(|f| f.hot_reloadable_supergraph.as_ref())
     }
 
     /// Load shedder (None if federation disabled or load shedding off)
     #[inline]
     pub fn load_shedder(&self) -> Option<&Arc<crate::federation::LoadShedder>> {
-        self.federation.as_ref().and_then(|f| f.load_shedder.as_ref())
+        self.federation
+            .as_ref()
+            .and_then(|f| f.load_shedder.as_ref())
     }
 
     /// Dynamic rate limiter for runtime config updates
@@ -337,12 +341,7 @@ impl AppState {
 
         // Spawn NATS rate limit config subscriber if configured
         if config.features.enable_bff {
-            Self::spawn_rate_limit_subscriber(
-                &config,
-                &bff,
-                &dynamic_rate_limiter,
-                &metrics,
-            );
+            Self::spawn_rate_limit_subscriber(&config, &bff, &dynamic_rate_limiter, &metrics);
         }
 
         Self {
@@ -485,9 +484,7 @@ impl AppState {
         let memory_budget_mb = resource_manager
             .as_ref()
             .map(|rm| rm.optimized.websocket_memory_budget_bytes / (1024 * 1024))
-            .unwrap_or_else(|| {
-                (max_connections as u64).saturating_mul(200) / 1024
-            });
+            .unwrap_or_else(|| (max_connections as u64).saturating_mul(200) / 1024);
         info!(
             "✓ WebSocket semaphore initialized (max connections: {}, memory budget: ~{}MB)",
             max_connections, memory_budget_mb
@@ -646,8 +643,13 @@ impl AppState {
         };
 
         // Load supergraph + create subscription manager
-        let (supergraph, subscription_manager, hot_reloadable_supergraph) =
-            Self::init_supergraph(config, metrics, &federation_http_client, &subscription_broadcaster).await;
+        let (supergraph, subscription_manager, hot_reloadable_supergraph) = Self::init_supergraph(
+            config,
+            metrics,
+            &federation_http_client,
+            &subscription_broadcaster,
+        )
+        .await;
 
         let supergraph = supergraph?;
         let subscription_manager = subscription_manager?;
@@ -713,10 +715,7 @@ impl AppState {
 
                                 info!("✓ Federation initialized with hot reload:");
                                 info!("    - {} subgraphs loaded", sg.subgraphs().len() / 2);
-                                info!(
-                                    "    - {} subscription routes",
-                                    sg.subscription_routes.len()
-                                );
+                                info!("    - {} subscription routes", sg.subscription_routes.len());
                                 info!(
                                     "    - WebSocket subscriptions: {}",
                                     if config.bff.federation.websocket.enabled {
@@ -733,15 +732,15 @@ impl AppState {
                                 drop(guard);
                                 (Some(sg_arc), Some(manager), Some(Arc::new(hot_sg)))
                             } else {
-                                error!("✗ HotReloadableSupergraph created but no supergraph loaded");
+                                error!(
+                                    "✗ HotReloadableSupergraph created but no supergraph loaded"
+                                );
                                 drop(guard);
                                 (None, None, None)
                             }
                         }
                         None => {
-                            error!(
-                                "✗ HotReloadableSupergraph created but no supergraph loaded"
-                            );
+                            error!("✗ HotReloadableSupergraph created but no supergraph loaded");
                             (None, None, None)
                         }
                     }
@@ -770,9 +769,8 @@ impl AppState {
         match Supergraph::load(&config.bff.federation.supergraph_url).await {
             Ok(sg) => {
                 let sg = Arc::new(sg);
-                let pool_config = SubscriptionManager::pool_config_from_bff(
-                    &config.bff.federation.websocket,
-                );
+                let pool_config =
+                    SubscriptionManager::pool_config_from_bff(&config.bff.federation.websocket);
                 let manager = Arc::new(SubscriptionManager::with_pool_config(
                     sg.clone(),
                     metrics.clone(),
@@ -849,16 +847,39 @@ impl AppState {
         };
         info!("{}", mode_label);
         let flag = |enabled| if enabled { "enabled" } else { "disabled" };
-        info!("  - Performance mode: {}", if performance_mode { "ENABLED (Hive Router-like)" } else { "disabled" });
-        info!("  - Response caching: {}", flag(executor_config.cache_enabled));
-        info!("  - Rate limiting: {}", flag(executor_config.rate_limit_enabled));
+        info!(
+            "  - Performance mode: {}",
+            if performance_mode {
+                "ENABLED (Hive Router-like)"
+            } else {
+                "disabled"
+            }
+        );
+        info!(
+            "  - Response caching: {}",
+            flag(executor_config.cache_enabled)
+        );
+        info!(
+            "  - Rate limiting: {}",
+            flag(executor_config.rate_limit_enabled)
+        );
         info!("  - APQ: {}", flag(executor_config.apq_enabled));
         info!("  - Security: {}", flag(executor_config.security_enabled));
         info!("  - Plugins: {}", flag(executor_config.plugins_enabled));
         info!("  - Batching: {}", flag(executor_config.batching_enabled));
         info!("  - Deduplication: {}", flag(executor_config.dedup_enabled));
-        info!("  - HMAC signing: {}", flag(executor_config.hmac_secret.is_some()));
-        info!("  - Hive planner: {}", if executor_config.use_hive_planner { "enabled (Federation v2)" } else { "disabled (custom)" });
+        info!(
+            "  - HMAC signing: {}",
+            flag(executor_config.hmac_secret.is_some())
+        );
+        info!(
+            "  - Hive planner: {}",
+            if executor_config.use_hive_planner {
+                "enabled (Federation v2)"
+            } else {
+                "disabled (custom)"
+            }
+        );
         if !config.bff.federation.subgraph_url_overrides.is_empty() {
             info!(
                 "  - Subgraph URL overrides: {} configured",
@@ -940,12 +961,7 @@ impl AppState {
             federation_enabled: config.bff.federation.rate_limit.enabled,
             federation_default_rps: config.bff.federation.rate_limit.default_rps,
             federation_default_burst: config.bff.federation.rate_limit.default_burst,
-            exempt_roles: config
-                .bff
-                .federation
-                .rate_limit
-                .exempt_roles
-                .clone(),
+            exempt_roles: config.bff.federation.rate_limit.exempt_roles.clone(),
             version: 0,
         };
 

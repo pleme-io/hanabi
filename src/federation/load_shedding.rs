@@ -506,7 +506,8 @@ impl AdaptiveConcurrencyLimiter {
                 "Adjusted concurrency limit"
             );
 
-            self.metrics.gauge("bff.load_shedding.limit", new_limit as f64, &[]);
+            self.metrics
+                .gauge("bff.load_shedding.limit", new_limit as f64, &[]);
         }
     }
 
@@ -1560,14 +1561,26 @@ mod tests {
         breaker.record_failure();
         std::thread::sleep(Duration::from_millis(15));
 
-        assert!(matches!(breaker.allow_request(), CircuitCheckResult::Allowed));
-        assert!(matches!(breaker.allow_request(), CircuitCheckResult::Allowed));
+        assert!(matches!(
+            breaker.allow_request(),
+            CircuitCheckResult::Allowed
+        ));
+        assert!(matches!(
+            breaker.allow_request(),
+            CircuitCheckResult::Allowed
+        ));
 
         match breaker.allow_request() {
-            CircuitCheckResult::Rejected { reason: RejectionReason::CircuitOpen, retry_after } => {
+            CircuitCheckResult::Rejected {
+                reason: RejectionReason::CircuitOpen,
+                retry_after,
+            } => {
                 assert_eq!(retry_after, Some(Duration::from_secs(1)));
             }
-            other => panic!("Expected rejection after half_open_requests exceeded, got {:?}", other),
+            other => panic!(
+                "Expected rejection after half_open_requests exceeded, got {:?}",
+                other
+            ),
         }
     }
 
@@ -1661,7 +1674,10 @@ mod tests {
     fn test_circuit_state_roundtrip() {
         assert_eq!(CircuitState::from_u8(STATE_CLOSED), CircuitState::Closed);
         assert_eq!(CircuitState::from_u8(STATE_OPEN), CircuitState::Open);
-        assert_eq!(CircuitState::from_u8(STATE_HALF_OPEN), CircuitState::HalfOpen);
+        assert_eq!(
+            CircuitState::from_u8(STATE_HALF_OPEN),
+            CircuitState::HalfOpen
+        );
         assert_eq!(CircuitState::from_u8(255), CircuitState::Closed);
     }
 }

@@ -146,20 +146,12 @@ impl Default for AuthInterceptionConfig {
         Self {
             login: MutationMatcher {
                 operation_prefixes: vec!["login".to_string()],
-                query_patterns: vec![
-                    "mutation Login".to_string(),
-                    "mutation login".to_string(),
-                ],
-                query_combined_patterns: vec![
-                    ("login(".to_string(), "accessToken".to_string()),
-                ],
+                query_patterns: vec!["mutation Login".to_string(), "mutation login".to_string()],
+                query_combined_patterns: vec![("login(".to_string(), "accessToken".to_string())],
             },
             logout: MutationMatcher {
                 operation_prefixes: vec![],
-                query_patterns: vec![
-                    "mutation Logout".to_string(),
-                    "mutation logout".to_string(),
-                ],
+                query_patterns: vec!["mutation Logout".to_string(), "mutation logout".to_string()],
                 query_combined_patterns: vec![],
             },
             mfa_verify: MutationMatcher {

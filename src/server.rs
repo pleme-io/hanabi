@@ -46,7 +46,10 @@ pub fn init_logging(config: &AppConfig) {
                 .with_line_number(config.logging.include_location)
                 .finish(),
         ) {
-            warn!("Could not reinitialize logging to JSON format: {} - continuing with pretty format", e);
+            warn!(
+                "Could not reinitialize logging to JSON format: {} - continuing with pretty format",
+                e
+            );
         }
     }
 }
@@ -116,8 +119,11 @@ pub fn bind_listeners(
 ) -> Result<(tokio::net::TcpListener, tokio::net::TcpListener), Box<dyn std::error::Error>> {
     let http_bind_addr: SocketAddr =
         format!("{}:{}", config.server.bind_address, config.server.http_port).parse()?;
-    let health_bind_addr: SocketAddr =
-        format!("{}:{}", config.server.bind_address, config.server.health_port).parse()?;
+    let health_bind_addr: SocketAddr = format!(
+        "{}:{}",
+        config.server.bind_address, config.server.health_port
+    )
+    .parse()?;
 
     let http_socket = Socket::new(Domain::IPV4, Type::STREAM, None)?;
     http_socket.set_nodelay(config.server.tcp_nodelay)?;

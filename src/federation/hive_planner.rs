@@ -54,7 +54,10 @@ use hive_router_query_planner::{
     ast::normalization::normalize_operation,
     graph::PlannerOverrideContext,
     planner::{Planner, PlannerError},
-    utils::{cancellation::{CancellationError, CancellationToken}, parsing::{parse_schema, safe_parse_operation}},
+    utils::{
+        cancellation::{CancellationError, CancellationToken},
+        parsing::{parse_schema, safe_parse_operation},
+    },
 };
 use moka::future::Cache;
 use once_cell::sync::Lazy;
@@ -1105,10 +1108,7 @@ mod tests {
         );
 
         // Verify both subgraphs are involved
-        let subgraphs: Vec<&str> = fetch_nodes
-            .iter()
-            .map(|n| n.as_str())
-            .collect();
+        let subgraphs: Vec<&str> = fetch_nodes.iter().map(|n| n.as_str()).collect();
         assert!(
             subgraphs.contains(&"auth"),
             "Expected auth subgraph in plan"
@@ -1716,10 +1716,7 @@ mod tests {
             match result {
                 Ok(plan) => {
                     let fetch_nodes = HivePlanner::collect_fetch_service_names(&plan);
-                    let subgraphs: Vec<&str> = fetch_nodes
-                        .iter()
-                        .map(|f| f.as_str())
-                        .collect();
+                    let subgraphs: Vec<&str> = fetch_nodes.iter().map(|f| f.as_str()).collect();
 
                     let has_expected = expected_subgraphs.iter().all(|s| subgraphs.contains(s));
 

@@ -134,7 +134,7 @@ impl Default for BffFederationConfig {
             // This skips non-essential pipeline steps to match Hive Router latency
             performance_mode: true,
             supergraph_url: "file:///etc/supergraph.graphql".to_string(),
-            hot_reload: false, // Disabled by default for stability
+            hot_reload: false,      // Disabled by default for stability
             poll_interval_secs: 30, // 30 seconds when hot reload is enabled
             subgraph_url_overrides: vec![],
             hmac: FederationHmacConfig::default(),
@@ -153,7 +153,7 @@ impl Default for BffFederationConfig {
             plugins: FederationPluginsConfig::default(),
             admin: FederationAdminConfig::default(),
             enable_load_shedding: false, // Disabled by default - just process all requests
-            use_hive_planner: true, // Hive planner enabled by default
+            use_hive_planner: true,      // Hive planner enabled by default
             cache_invalidation: FederationCacheInvalidationConfig::default(),
             subgraph_default_port: default_subgraph_port(),
             subgraph_default_path: default_subgraph_path(),
@@ -331,7 +331,7 @@ impl Default for FederationHttpPoolConfig {
             // Previous value of 10 caused intermittent timeouts!
             pool_max_idle_per_host: 64,
             pool_idle_timeout_secs: 90, // 90 seconds (reqwest default)
-            tcp_keepalive_secs: 60, // 60 seconds
+            tcp_keepalive_secs: 60,     // 60 seconds
             gzip_enabled: true,
             // HTTP/2 provides request multiplexing, reducing connection overhead.
             // Enabled by default as Hive Router uses HTTP/2 for subgraph connections.
@@ -428,12 +428,12 @@ pub struct FederationWebSocketConfig {
 impl Default for FederationWebSocketConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // WebSocket subscriptions enabled by default
-            path: "/graphql".to_string(), // Most subgraphs use same path for HTTP and WS
-            connect_timeout_secs: 10, // 10 seconds
+            enabled: true,                         // WebSocket subscriptions enabled by default
+            path: "/graphql".to_string(),          // Most subgraphs use same path for HTTP and WS
+            connect_timeout_secs: 10,              // 10 seconds
             max_connections_per_subgraph: 4, // 4 connections per subgraph (with multiplexing, this handles 400 subscriptions)
             max_subscriptions_per_connection: 100, // 100 subscriptions per connection before opening a new one
-            ping_interval_secs: 30, // 30 seconds
+            ping_interval_secs: 30,                // 30 seconds
             pong_timeout_secs: 10, // 10 seconds to respond to ping before connection is unhealthy
             idle_timeout_secs: 300, // 5 minutes of no subscriptions before closing connection
             reconnect_delay_ms: 1000, // 1 second initial delay
@@ -472,7 +472,7 @@ impl Default for FederationQueryPlanCacheConfig {
         Self {
             enabled: true,
             max_size: 1000, // 1000 plans
-            ttl_secs: 0, // No expiry (plans are invalidated on schema change)
+            ttl_secs: 0,    // No expiry (plans are invalidated on schema change)
         }
     }
 }
@@ -541,9 +541,9 @@ pub struct FederationResponseCacheConfig {
 impl Default for FederationResponseCacheConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Enabled by default for Phase 2
-            max_capacity: 10_000, // 10,000 entries
-            default_ttl_secs: 60, // 60 seconds
+            enabled: true,               // Enabled by default for Phase 2
+            max_capacity: 10_000,        // 10,000 entries
+            default_ttl_secs: 60,        // 60 seconds
             max_entry_size: 1024 * 1024, // 1 MB
             cache_only_success: true,
             strategies: vec![],
@@ -588,10 +588,10 @@ pub struct FederationDeduplicationConfig {
 impl Default for FederationDeduplicationConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Enabled by default for Phase 2
-            max_wait_secs: 30, // 30 seconds
-            max_waiters: 100, // 100 waiters per request
-            entry_ttl_secs: 60, // 60 seconds
+            enabled: true,       // Enabled by default for Phase 2
+            max_wait_secs: 30,   // 30 seconds
+            max_waiters: 100,    // 100 waiters per request
+            entry_ttl_secs: 60,  // 60 seconds
             max_entries: 10_000, // 10,000 in-flight requests
         }
     }
@@ -633,9 +633,9 @@ pub struct FederationApqConfig {
 impl Default for FederationApqConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Enabled by default for Phase 2
-            max_entries: 10_000, // 10,000 queries
-            ttl_secs: 86400, // 24 hours
+            enabled: true,               // Enabled by default for Phase 2
+            max_entries: 10_000,         // 10,000 queries
+            ttl_secs: 86400,             // 24 hours
             max_query_size: 1024 * 1024, // 1 MB
             required: false,
         }
@@ -684,8 +684,8 @@ pub struct FederationRateLimitConfig {
 impl Default for FederationRateLimitConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Enabled by default for Phase 2
-            default_rps: 1000, // 1000 requests per second per user
+            enabled: true,       // Enabled by default for Phase 2
+            default_rps: 1000,   // 1000 requests per second per user
             default_burst: 2000, // Allow burst of 2000 requests
             operation_limits: vec![],
             subgraph_limits: vec![],
@@ -818,7 +818,7 @@ pub struct FederationQueryPlannerConfig {
 impl Default for FederationQueryPlannerConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Enable query planner when federation is enabled
+            enabled: true,         // Enable query planner when federation is enabled
             plan_cache_size: 1000, // Cache up to 1000 query plans
             cache_enabled: true,
         }
@@ -857,7 +857,7 @@ impl Default for FederationExecutorConfig {
             // With 100 concurrent users, that's 300-500 subgraph calls
             // Previous value of 16 caused request queuing and 504 timeouts!
             max_concurrency: 256,
-            retry_count: 1, // Retry once on failure
+            retry_count: 1,      // Retry once on failure
             retry_delay_ms: 100, // 100ms delay between retries
         }
     }
@@ -932,7 +932,7 @@ impl Default for FederationDepthLimitConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            max_depth: 10, // Suitable for most applications
+            max_depth: 10,                      // Suitable for most applications
             allow_introspection_override: true, // Allow introspection to exceed depth limit
         }
     }
@@ -969,9 +969,9 @@ impl Default for FederationComplexityConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            max_complexity: 1000, // Suitable for most applications
+            max_complexity: 1000,  // Suitable for most applications
             default_field_cost: 1, // Each field costs 1 by default
-            list_multiplier: 10, // List fields multiply cost by 10
+            list_multiplier: 10,   // List fields multiply cost by 10
             field_costs: vec![],
         }
     }
@@ -1114,7 +1114,7 @@ pub struct FederationPluginsConfig {
 impl Default for FederationPluginsConfig {
     fn default() -> Self {
         Self {
-            enabled: true, // Enabled by default for Phase 2
+            enabled: true,   // Enabled by default for Phase 2
             fail_fast: true, // Abort request on plugin errors
             security_plugin: false,
             tracing_plugin: false,
@@ -1297,7 +1297,7 @@ impl Default for PluginPerformanceConfig {
         Self {
             enabled: false,
             slow_query_threshold_ms: 1000, // 1 second
-            critical_threshold_ms: 5000, // 5 seconds
+            critical_threshold_ms: 5000,   // 5 seconds
             track_by_operation: true,
             max_tracked_operations: 1000,
             include_hints: false,

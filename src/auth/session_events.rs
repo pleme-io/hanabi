@@ -93,10 +93,7 @@ pub async fn subscribe_session_invalidation(
         .await
         .map_err(|e| format!("Failed to subscribe to {}: {}", subject, e))?;
 
-    info!(
-        "Subscribed to {} for session invalidation events",
-        subject
-    );
+    info!("Subscribed to {} for session invalidation events", subject);
 
     // Process events
     while let Some(message) = subscriber.next().await {
@@ -186,7 +183,14 @@ pub fn spawn_session_invalidation_subscriber(
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         loop {
-            match subscribe_session_invalidation(&nats_url, &product, session_redis.clone(), session_config.clone()).await {
+            match subscribe_session_invalidation(
+                &nats_url,
+                &product,
+                session_redis.clone(),
+                session_config.clone(),
+            )
+            .await
+            {
                 Ok(()) => {
                     warn!("Session invalidation subscriber exited normally, reconnecting in 5s...");
                 }

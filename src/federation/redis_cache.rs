@@ -706,12 +706,14 @@ impl<T: Clone + Send + Sync + Serialize + DeserializeOwned + 'static> TwoTierCac
 
     /// Record cache miss metric
     fn record_miss(&self) {
-        self.metrics.incr(&format!("bff.federation.cache.{}.miss", self.name), &[]);
+        self.metrics
+            .incr(&format!("bff.federation.cache.{}.miss", self.name), &[]);
     }
 
     /// Record cache set metric
     fn record_set(&self) {
-        self.metrics.incr(&format!("bff.federation.cache.{}.set", self.name), &[]);
+        self.metrics
+            .incr(&format!("bff.federation.cache.{}.set", self.name), &[]);
     }
 
     /// Record cache invalidate metric

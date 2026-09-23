@@ -377,9 +377,7 @@ async fn forward_stripe_webhook(
     event_type: &str,
     raw_payload: &[u8],
 ) -> Result<(), String> {
-    let client = state
-        .http_client()
-        .ok_or("HTTP client not initialized")?;
+    let client = state.http_client().ok_or("HTTP client not initialized")?;
 
     let mutation = r#"
         mutation ProcessStripeWebhook($input: StripeWebhookInput!) {
@@ -443,9 +441,7 @@ async fn forward_pix_webhook(
     event_type: &str,
     raw_payload: &[u8],
 ) -> Result<(), String> {
-    let client = state
-        .http_client()
-        .ok_or("HTTP client not initialized")?;
+    let client = state.http_client().ok_or("HTTP client not initialized")?;
 
     let mutation = r#"
         mutation ProcessPixWebhook($input: PixWebhookInput!) {

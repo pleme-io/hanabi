@@ -81,8 +81,7 @@ impl CatalogWatcher {
             return Err(format!("catalog returned {}", resp.status()));
         }
 
-        let entries: Vec<CatalogServiceEntry> =
-            resp.json().await.map_err(|e| e.to_string())?;
+        let entries: Vec<CatalogServiceEntry> = resp.json().await.map_err(|e| e.to_string())?;
 
         Ok(entries
             .into_iter()

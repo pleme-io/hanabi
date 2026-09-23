@@ -150,7 +150,10 @@ impl DynamicRateLimiter {
     /// Get federation rate limit parameters (rps, burst)
     pub async fn federation_limits(&self) -> (u32, u32) {
         let config = self.config.read().await;
-        (config.federation_default_rps, config.federation_default_burst)
+        (
+            config.federation_default_rps,
+            config.federation_default_burst,
+        )
     }
 
     /// Check if a role is exempt from rate limiting

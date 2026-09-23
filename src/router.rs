@@ -27,20 +27,20 @@ use tower_http::{
 };
 use tracing::info;
 
+use crate::auth::session_auth_middleware;
 #[cfg(feature = "google-oauth")]
 use crate::auth::{
     google_oauth_callback, google_oauth_init, link_oauth_account, restore_oauth_account,
 };
 #[cfg(feature = "instagram-oauth")]
 use crate::auth::{instagram_oauth_callback, instagram_oauth_init};
-use crate::auth::session_auth_middleware;
-use crate::bff::{admin_reload_supergraph, admin_supergraph_status, graphql_proxy, graphql_ws_proxy};
-use crate::config::AppConfig;
-use crate::handlers::{
-    backend_upload_proxy, bug_reports, simple_health, spa_fallback, telemetry,
+use crate::bff::{
+    admin_reload_supergraph, admin_supergraph_status, graphql_proxy, graphql_ws_proxy,
 };
+use crate::config::AppConfig;
 #[cfg(feature = "geolocation")]
 use crate::handlers::geolocation;
+use crate::handlers::{backend_upload_proxy, bug_reports, simple_health, spa_fallback, telemetry};
 use crate::health::{health_live, health_ready, health_startup};
 use crate::health_aggregator::direct_service_health;
 use crate::middleware::{
@@ -117,7 +117,10 @@ impl MiddlewareCustomization {
     }
 
     /// Returns an iterator over custom middleware registered at the given slot.
-    pub fn custom_at(&self, slot: MiddlewareSlot) -> impl Iterator<Item = &(MiddlewareSlot, MiddlewareFn)> {
+    pub fn custom_at(
+        &self,
+        slot: MiddlewareSlot,
+    ) -> impl Iterator<Item = &(MiddlewareSlot, MiddlewareFn)> {
         self.custom.iter().filter(move |(s, _)| *s == slot)
     }
 

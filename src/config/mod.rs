@@ -55,6 +55,12 @@ pub use telemetry::TelemetryConfig;
 /// Default path: /etc/hanabi/config.yaml (override with CONFIG_PATH env var)
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct AppConfig {
+    /// L7 reverse proxy. Until this field existed, `ProxyConfig` was a type
+    /// nothing ever deserialized — the proxy could not be turned on by any
+    /// configuration, only by editing code.
+    #[serde(default)]
+    pub proxy: crate::proxy::ProxyConfig,
+
     /// Environment identifier (e.g., "production", "staging", "development")
     #[serde(default = "default_environment")]
     pub environment: String,

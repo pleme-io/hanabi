@@ -33,7 +33,7 @@ use crate::state::{AppState, Extensions};
 use crate::traits::{OAuthProvider, RouteExtension, WebhookHandler};
 
 use pleme_notifications::{
-    DependencyStatus, NotificationClient, PodIdentity, StartupPhase, StartupReport, PhaseStatus,
+    DependencyStatus, NotificationClient, PhaseStatus, PodIdentity, StartupPhase, StartupReport,
 };
 
 /// Builder for composing a Hanabi BFF server.
@@ -132,9 +132,8 @@ impl ServerBuilder {
 
     /// Build the server, initializing application state and composing routes.
     pub async fn build(self) -> Server {
-        let state = Arc::new(
-            AppState::with_extensions(self.config.clone(), self.state_extensions).await,
-        );
+        let state =
+            Arc::new(AppState::with_extensions(self.config.clone(), self.state_extensions).await);
 
         Server {
             config: self.config,
@@ -169,8 +168,11 @@ impl Server {
 
     /// Build the composed application router from core routes + registered providers.
     pub fn build_app_router(&self) -> Router {
-        let mut app =
-            router::build_core_app_router(self.state.clone(), &self.config, &self.middleware_customization);
+        let mut app = router::build_core_app_router(
+            self.state.clone(),
+            &self.config,
+            &self.middleware_customization,
+        );
 
         // Merge OAuth provider routes
         if !self.oauth_providers.is_empty() {
@@ -201,7 +203,12 @@ impl Server {
             app = app.merge(routes.clone());
         }
 
-        router::apply_global_middleware(app, self.state.clone(), &self.config, &self.middleware_customization)
+        router::apply_global_middleware(
+            app,
+            self.state.clone(),
+            &self.config,
+            &self.middleware_customization,
+        )
     }
 
     /// Run the server with dual-port serving and graceful shutdown.
@@ -244,17 +251,14 @@ impl Server {
             pod_identity,
             cluster_name: std::env::var("DISCORD_CLUSTER_NAME")
                 .unwrap_or_else(|_| "unknown".to_string()),
-            environment: std::env::var("ENVIRONMENT")
-                .unwrap_or_else(|_| "unknown".to_string()),
+            environment: std::env::var("ENVIRONMENT").unwrap_or_else(|_| "unknown".to_string()),
             total_duration,
-            phases: vec![
-                StartupPhase {
-                    name: "init".into(),
-                    duration: total_duration,
-                    status: PhaseStatus::Success,
-                    detail: None,
-                },
-            ],
+            phases: vec![StartupPhase {
+                name: "init".into(),
+                duration: total_duration,
+                status: PhaseStatus::Success,
+                detail: None,
+            }],
             dependency_status: DependencyStatus::default(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             git_sha: std::env::var("GIT_SHA").unwrap_or_else(|_| "unknown".to_string()),

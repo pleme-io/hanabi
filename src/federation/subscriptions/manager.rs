@@ -139,7 +139,8 @@ impl SubscriptionManager {
     ) -> Result<mpsc::Receiver<ServerMessage>, SubscriptionError> {
         // Route the subscription to the correct subgraph
         let subgraph_name = self.router.route(&payload.query).map_err(|e| {
-            self.metrics.incr("bff.federation.subscription.routing_error", &[]);
+            self.metrics
+                .incr("bff.federation.subscription.routing_error", &[]);
             SubscriptionError::RoutingError(e.to_string())
         })?;
 
