@@ -173,8 +173,7 @@ fn every_declared_module_is_reached_or_declared_dark() {
         .cloned()
         .collect();
 
-    let expected: BTreeSet<String> =
-        EXPECTED_DARK.iter().map(|(n, _)| n.to_string()).collect();
+    let expected: BTreeSet<String> = EXPECTED_DARK.iter().map(|(n, _)| n.to_string()).collect();
 
     let newly_dark: Vec<_> = measured.difference(&expected).collect();
     let newly_wired: Vec<_> = expected.difference(&measured).collect();
@@ -243,7 +242,11 @@ fn the_binary_and_library_module_sets_are_reported() {
 /// struct field of that type does not count — that is exactly the signal that
 /// fooled the first version of this gate into calling `proxy` reached.
 fn is_constructed(root: &Path, module: &str, ty: &str) -> bool {
-    let patterns = [format!("{ty}::new("), format!("{ty} {{"), format!("{ty}::with")];
+    let patterns = [
+        format!("{ty}::new("),
+        format!("{ty} {{"),
+        format!("{ty}::with"),
+    ];
     rs_files_excluding(root, module).iter().any(|f| {
         let Ok(text) = std::fs::read_to_string(f) else {
             return false;
