@@ -1,7 +1,31 @@
-//! L4 TCP/UDP load balancer for non-HTTP services.
+//! L4 TCP load balancer for non-HTTP services.
 //!
-//! Proxies raw TCP/UDP connections to backend pools discovered
-//! from tatara's service catalog. Used for databases, NATS, Redis, etc.
+//! ── ★ TIER: LIBRARY-ONLY. NOT IN THE SHIPPED BINARY. ─────────────────────
+//! `main.rs` has `mod proxy;` and **no `mod l4;`**, so nothing here is
+//! compiled into the `hanabi` executable — only into the library target for
+//! tests. Nothing constructs any of it, `AppConfig` has no `l4` field, and
+//! `L4BackendPool::update` is never called, so even if a listener ran every
+//! connection would be dropped at `next()` returning `None`.
+//!
+//! This header previously said raw connections were "proxied … **Used for**
+//! databases, NATS, Redis", which asserts live use of code that does not ship.
+//! Adopting the honesty of `crate::proxy`'s header instead: say the tier, then
+//! say the intent.
+//!
+//! **Intent** (not yet true): proxy raw TCP connections to backend pools
+//! discovered from tatara's service catalog, for databases, NATS, Redis and
+//! the other non-HTTP services a front door must carry.
+//!
+//! **UDP is absent.** `L4Proxy.protocol` defaults to `"tcp"` and will happily
+//! deserialize `"udp"`, for which there is no code path at all — a `udp` entry
+//! is silently inert. DNS and MQTT both want it; implementing it or rejecting
+//! it at parse time are both acceptable, silence is not.
+//!
+//! What IS implemented and correct: [`run_tcp_proxy`] binds a listener,
+//! accepts in a loop, and bidirectionally copies to a selected backend. That
+//! copy loop is the same shape `crate::proxy` needs for websocket upgrades.
+//! It has no shutdown hook — its accept loop never returns, so it cannot
+//! participate in graceful drain until it takes a shutdown receiver.
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicUsize, Ordering};

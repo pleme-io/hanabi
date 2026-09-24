@@ -240,6 +240,14 @@ k6 run load-tests/graphql-load-test.js
 
 ## Project Structure
 
+> **★ Three modules are DARK** — `src/proxy/`, `src/l4/`, `src/mesh/`. They
+> compile, they have tests, and **nothing constructs them**. They were absent
+> from this table until 2026-09-24, which meant a reader of the README could
+> not learn they exist and a reader of `lib.rs` could not learn they are
+> unreached. A stale doc elsewhere then described hanabi *as* those three
+> modules, and an agent designed a fleet front door on that picture. Each row
+> below states its tier; see each module's header for detail.
+
 | Path | Purpose |
 |------|---------|
 | `src/main.rs` | Binary entry point, tokio runtime setup |
@@ -266,6 +274,9 @@ k6 run load-tests/graphql-load-test.js
 | `src/telemetry/` | OpenTelemetry setup |
 | `src/providers/` | Pluggable provider implementations |
 | `src/traits.rs` | Extension traits (OAuthProvider, WebhookHandler, RouteExtension) |
+| `src/proxy/` | L7 reverse proxy — **DARK: in the binary, config never read, no handler, no websocket upgrades** |
+| `src/l4/` | L4 TCP balancer — **DARK: library-only, absent from the binary; no UDP** |
+| `src/mesh/` | Circuit breaker + retry backoff — **DARK: library-only, and a duplicate of the wired `federation/load_shedding.rs`** |
 | `config/` | Example YAML config and config documentation |
 | `tests/` | Integration tests (federation, entity resolution, schema validation) |
 | `load-tests/` | k6 load test scripts |
