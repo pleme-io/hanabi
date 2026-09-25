@@ -2,7 +2,7 @@
   "schema_version": 2,
   "cargo_lock_sha256": "c3235f3abcecd31c0841e2f1db6c4c3ba7142c76dba9dd0e4a5bce126c1aa372",
   "manifest_sha256": {
-    "Cargo.toml": "c77b47399f3c01e12232724eea1bf648fab8fe3d01406336c50d77c374d94cb7"
+    "Cargo.toml": "b63a2bf132d8fa05844b7118b84ce0683fe55708126d8775d30bb772c52c5b67"
   },
   "target_resolves": {
     "base": {
@@ -20681,5 +20681,18 @@
     }
   },
   "git_nar_sha256": {},
-  "flake_metadata": {}
+  "flake_metadata": {
+    "hanabi-bff": {
+      "module_trio": {
+        "name": "hanabi",
+        "description": "Hanabi — GraphQL Federation BFF platform service (Rust/Axum)",
+        "packageAttr": "hanabi",
+        "binaryName": "hanabi",
+        "hmNamespace": "programs",
+        "withMcp": false,
+        "withHttp": false,
+        "withSystemDaemon": true
+      }
+    }
+  }
 }
