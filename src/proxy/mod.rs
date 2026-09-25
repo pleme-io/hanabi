@@ -18,17 +18,22 @@
 //! * Forwarded headers and hop-by-hop stripping: DONE (see
 //!   [`ProxyService::prepare_headers`]) — this is what makes a downstream's
 //!   `trusted_proxies` mean anything.
-//! * WebSocket / HTTP upgrade: **NOT SUPPORTED**. `reqwest` cannot proxy an
-//!   `Upgrade`, and Home Assistant, node-red, esphome, music-assistant and
-//!   go2rtc are all websocket-driven, so their pages would load and then hang
-//!   forever. Carrying them means replacing this forwarder with `hyper-util`
-//!   plus `hyper::upgrade::on` on both halves. Until then this proxy is honest
-//!   for plain HTTP only, and that limit is the reason it is not yet wired
-//!   into a front door.
+//! * WebSocket / HTTP upgrade: **CARRIED** as of 2026-09-24 — see [`upgrade`].
+//!   It is a SEPARATE path, not a change to [`ProxyService::forward`], because
+//!   `reqwest` owns its connection and never hands back the socket an upgrade
+//!   needs; the tunnel is a byte copy after a hand-rolled handshake, the same
+//!   shape as `crate::l4::run_tcp_proxy`. Plain HTTP keeps its existing tested
+//!   path untouched. This is what unblocks Home Assistant, node-red, esphome,
+//!   music-assistant and go2rtc, all of which open a socket right after their
+//!   first page load — a proxy without it serves a page that loads and hangs.
 //! * TLS termination: none, by decision. Nothing here terminates.
+//! * `config.proxy` is still never READ — the config field is deserialized and
+//!   no `ProxyService` is constructed from it. Carrying upgrades removed the
+//!   reason not to wire a front door; it did not itself wire one.
 
 pub mod cache;
 pub mod discovery;
+pub mod upgrade;
 
 use axum::body::Body;
 use axum::extract::State;
@@ -315,9 +320,13 @@ impl ProxyService {
 
     /// Forward a request to the appropriate backend.
     ///
-    /// ★ PLAIN HTTP ONLY. An `Upgrade` cannot be carried by `reqwest`, so a
-    /// websocket route reaches the upstream and then stalls. See the module
-    /// header.
+    /// ★ PLAIN HTTP ONLY, and that is now a routing decision rather than a
+    /// limitation: an `Upgrade` cannot be carried by `reqwest` (it owns the
+    /// connection and never yields the socket), so a caller must test
+    /// [`upgrade::requested_upgrade`] on the inbound headers FIRST and route an
+    /// upgrade to [`upgrade::handshake`] + [`upgrade::tunnel`] instead. Sending
+    /// an upgrade here reaches the upstream and then stalls, because
+    /// [`Self::prepare_headers`] strips the two headers that make it an upgrade.
     pub async fn forward(
         &self,
         route: &ProxyRoute,
