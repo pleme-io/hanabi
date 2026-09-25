@@ -66,13 +66,37 @@ const EXPECTED_DARK: &[(&str, &str)] = &[
 /// inert as a fully dark one while looking wired from the outside. That is a
 /// *more* dangerous state than darkness, not a lesser one — it is why
 /// `AppConfig.proxy` reads in review as "the proxy is configured".
-const EXPECTED_CONFIG_ONLY: &[(&str, &str, &str)] = &[(
+/// ── EMPTY as of 2026-09-24, and empty is a RESULT, not a default ──────────
+///
+/// `proxy` was the sole entry and it graduated: `ProxyService` is now
+/// constructed in `builder.rs` behind `config.proxy.enabled`, an axum handler
+/// exists (`proxy::handler::intercept`), and `Upgrade` is carried
+/// (`proxy::upgrade`). It moved to [`EXPECTED_WIRED`] rather than being deleted,
+/// because a tier that stops being asserted stops being defended.
+///
+/// This gate CAUGHT that transition rather than being told about it: the moment
+/// `ProxyService::new` appeared outside `src/proxy/`, the config-only assertion
+/// failed and its message named every doc that still called the module dark.
+/// That is the gate working exactly as intended, and it is why the empty list
+/// stays here with its reason instead of the constant being removed — the next
+/// module to reach this state needs the tier to exist.
+const EXPECTED_CONFIG_ONLY: &[(&str, &str, &str)] = &[];
+
+/// Modules that are genuinely WIRED — referenced AND constructed outside their
+/// own directory.
+///
+/// The mirror of [`EXPECTED_CONFIG_ONLY`], and the reason this file does not go
+/// vacuous when that list empties: with nothing asserted, a loop over an empty
+/// slice passes while measuring nothing, which is the shape of a blind test.
+/// Pinning the wired tier means REMOVING the wiring also fails the gate — so
+/// the graduation cannot be silently undone by a later refactor.
+const EXPECTED_WIRED: &[(&str, &str, &str)] = &[(
     "proxy",
     "ProxyService",
-    "L7 reverse proxy. IN the binary (main.rs has `mod proxy;`) and \
-     `AppConfig.proxy` deserializes, but nothing READS `config.proxy`, there \
-     is no axum handler, and `Upgrade` is unsupported — so every \
-     websocket-driven UI would load and hang.",
+    "L7 reverse proxy. Constructed in builder.rs behind `config.proxy.enabled` \
+     and layered ahead of routing so it claims only matching paths; `Upgrade` \
+     is carried by proxy::upgrade, which is what unblocked the \
+     websocket-driven home UIs.",
 )];
 
 fn src_dir() -> PathBuf {
@@ -275,9 +299,44 @@ fn referenced_but_unconstructed_modules_are_declared() {
         assert!(
             !is_constructed(&root, module, ty),
             "`{ty}` IS now constructed outside src/{module}/ -- the module is \
-             genuinely wired. Remove it from EXPECTED_CONFIG_ONLY and correct \
+             genuinely wired. Move it to EXPECTED_WIRED and correct \
              every doc that calls it dark: src/lib.rs's `pub mod` block, \
              README.md's Project Structure table, and theory/VOCABULARY.md."
+        );
+    }
+}
+
+/// The graduation, pinned in the other direction.
+///
+/// Without this the file would go BLIND the moment `EXPECTED_CONFIG_ONLY`
+/// emptied: a loop over an empty slice asserts nothing and reports success. So
+/// the wired tier is asserted too, which means un-wiring a module fails the gate
+/// just as loudly as wiring one did.
+#[test]
+fn wired_modules_are_actually_constructed() {
+    let root = src_dir();
+
+    // The denominator. A list that silently emptied would make every claim
+    // below vacuous, which is the exact failure this gate exists to catch in
+    // the code it inspects.
+    assert!(
+        !EXPECTED_WIRED.is_empty(),
+        "EXPECTED_WIRED is empty -- with nothing to assert this test measures \
+         nothing. If a module was genuinely un-wired, move it to \
+         EXPECTED_CONFIG_ONLY or EXPECTED_DARK rather than emptying this list."
+    );
+
+    for (module, ty, _why) in EXPECTED_WIRED {
+        assert!(
+            is_reached(&root, module),
+            "`{module}` is not referenced at all, so it cannot be wired -- it \
+             belongs in EXPECTED_DARK"
+        );
+        assert!(
+            is_constructed(&root, module, ty),
+            "`{ty}` is NO LONGER constructed outside src/{module}/ -- the wiring \
+             regressed. Either restore it, or move the entry down a tier and say \
+             so in src/lib.rs, README.md and theory/VOCABULARY.md."
         );
     }
 }

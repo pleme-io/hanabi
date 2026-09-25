@@ -67,26 +67,43 @@ pub mod providers;
 pub mod server;
 pub mod traits;
 
-// ── Proxy, L4, and service mesh — ALL THREE ARE DARK. ───────────────────
-// Tier, measured 2026-09-24, so no reader has to find out the hard way:
+// ── Proxy is WIRED; L4 and mesh are still dark. ─────────────────────────
+// Tier, measured, so no reader has to find out the hard way. The asymmetry is
+// the point: two of these three are unfinished work and one is not, and a
+// header that lumped them together is how "hanabi is an L7/L4 proxy" became a
+// believed fact in the first place.
 //
-//   proxy  IN-BINARY, UNREACHED. `mod proxy;` is in main.rs and
-//          `AppConfig.proxy` deserializes, but nothing ever READS
-//          `config.proxy` and `ProxyService` is constructed only in its own
-//          tests. No axum handler exists. No websocket/upgrade support.
-//   l4     LIBRARY-ONLY. There is no `mod l4;` in main.rs, so this is not in
-//          the shipped binary at all. `run_tcp_proxy` is genuinely
+//   proxy  WIRED as of 2026-09-24. `ProxyService` is constructed in
+//          `builder.rs` behind `config.proxy.enabled`, so the reverse proxy is
+//          enabled by CONFIGURATION rather than by editing code — which it was
+//          not, for as long as `AppConfig.proxy` deserialized and nothing read
+//          it. `proxy::handler::intercept` is the axum handler that was missing;
+//          it is LAYERED rather than a fallback, so it claims only paths a
+//          configured route matches and the SPA fallback is untouched.
+//          `proxy::upgrade` carries `Upgrade`/WebSocket, which is what unblocked
+//          the websocket-driven home UIs (Home Assistant, node-red, esphome,
+//          music-assistant, go2rtc) that used to load and then hang.
+//          Still absent: TLS termination (`Backend::url()` is http:// by
+//          decision) and least-connections balancing (falls back to
+//          round-robin, as it always did).
+//   l4     LIBRARY-ONLY, still dark. There is no `mod l4;` in main.rs, so this
+//          is not in the shipped binary at all. `run_tcp_proxy` is genuinely
 //          implemented; nothing calls it, no `l4` field exists on AppConfig,
 //          no backends are ever populated, and UDP is absent entirely.
+//          `proxy::upgrade::tunnel` deliberately reuses its copy-loop SHAPE
+//          rather than calling into it — the handshake, not the byte pump, is
+//          what an upgrade needs, and importing a dark module to get a loop
+//          would have made it look reached without making it work.
 //   mesh   LIBRARY-ONLY, and a DUPLICATE. Its CircuitBreaker is a simpler
 //          unused copy of the live, tested, per-subgraph
 //          `federation::load_shedding::CircuitBreakerRegistry` that
 //          `state.rs` actually constructs. It also advertises rate limiting
 //          it does not contain (that lives in `rate_limiting/`, and is wired).
+//          Retire rather than wire.
 //
-// None of this is a defect in the code — it is unfinished work, and the
-// wiring plan is tracked. It IS a defect to let a reader assume otherwise,
-// which is how "hanabi is an L7/L4 proxy" became a believed fact.
+// `tests/dark_modules_test.rs` enforces every line above: each module's tier is
+// asserted in BOTH directions, so wiring one or un-wiring one fails the gate
+// instead of quietly aging this comment into a lie.
 pub mod l4;
 pub mod mesh;
 pub mod proxy;

@@ -1251,6 +1251,7 @@ dependencies = [
  "hmac",
  "http",
  "hyper",
+ "hyper-util",
  "jsonwebtoken",
  "lazy_static",
  "mime_guess",

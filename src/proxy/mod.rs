@@ -33,6 +33,7 @@
 
 pub mod cache;
 pub mod discovery;
+pub mod handler;
 pub mod upgrade;
 
 use axum::body::Body;
@@ -318,6 +319,25 @@ impl ProxyService {
         headers
     }
 
+    /// Select a backend for a route, honouring its strategy.
+    ///
+    /// Extracted from [`Self::forward`] so the UPGRADE path selects backends the
+    /// same way plain HTTP does. Two selectors would mean a websocket route
+    /// could load-balance differently from the HTTP route beside it — and the
+    /// divergence would only show under load, on one protocol.
+    ///
+    /// `LeastConnections` falls back to round-robin because nothing counts
+    /// in-flight requests yet; that is the pre-existing behaviour, preserved
+    /// verbatim rather than quietly changed by this refactor.
+    pub async fn pick_backend(&self, route: &ProxyRoute) -> Option<Backend> {
+        let pool = self.pools.get(&route.service)?;
+        match route.strategy {
+            LoadBalanceStrategy::RoundRobin => pool.next_round_robin().await,
+            LoadBalanceStrategy::Random => pool.next_random().await,
+            LoadBalanceStrategy::LeastConnections => pool.next_round_robin().await,
+        }
+    }
+
     /// Forward a request to the appropriate backend.
     ///
     /// ★ PLAIN HTTP ONLY, and that is now a routing decision rather than a
@@ -336,17 +356,10 @@ impl ProxyService {
         body: reqwest::Body,
         client_ip: Option<std::net::IpAddr>,
     ) -> Result<reqwest::Response, ProxyError> {
-        let pool = self
-            .pools
-            .get(&route.service)
+        let backend = self
+            .pick_backend(route)
+            .await
             .ok_or(ProxyError::NoBackends)?;
-
-        let backend = match route.strategy {
-            LoadBalanceStrategy::RoundRobin => pool.next_round_robin().await,
-            LoadBalanceStrategy::Random => pool.next_random().await,
-            LoadBalanceStrategy::LeastConnections => pool.next_round_robin().await, // fallback
-        }
-        .ok_or(ProxyError::NoBackends)?;
 
         let path = if route.strip_prefix {
             original_uri
@@ -402,7 +415,11 @@ pub fn parse_upstream(s: &str) -> Option<Backend> {
 /// §7.6.1). Forwarding `Connection` or `Upgrade` makes an upstream negotiate
 /// with the proxy's own connection state; forwarding `Transfer-Encoding` on a
 /// re-framed body corrupts it.
-const HOP_BY_HOP: &[&str] = &[
+/// `pub(crate)` so the response path in [`handler`] strips exactly this set
+/// rather than keeping a second copy. The headers that must not be forwarded TO
+/// an upstream are the same ones that must not be replayed FROM one, and two
+/// lists would drift apart at the first edit.
+pub(crate) const HOP_BY_HOP: &[&str] = &[
     "connection",
     "keep-alive",
     "proxy-authenticate",

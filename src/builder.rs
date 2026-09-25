@@ -203,6 +203,36 @@ impl Server {
             app = app.merge(routes.clone());
         }
 
+        // ── ★ THE PROXY, FINALLY READ FROM CONFIG ──────────────────────────
+        // `config.proxy` was deserialized and consulted by nothing: the field
+        // existed, `ProxyConfig` existed, and no `ProxyService` was ever built
+        // from either — so the reverse proxy could not be enabled by any
+        // configuration, only by editing code. This is the line that closes it.
+        //
+        // Layered rather than `fallback`-ed, and the distinction matters: hanabi
+        // already serves its SPA from the fallback, so a second fallback either
+        // loses the SPA or is never reached. A layer sees each request before
+        // routing resolves, claims only the paths a configured route matches,
+        // and passes everything else through untouched.
+        //
+        // Applied AFTER every merge and BEFORE the global middleware, so a
+        // proxied request still gets tracing, CORS and the rest — a route that
+        // bypassed them would be a hole in the very policies the front door
+        // exists to apply.
+        let app = if self.config.proxy.enabled {
+            let svc = std::sync::Arc::new(crate::proxy::ProxyService::new(self.config.proxy.clone()));
+            info!(
+                routes = self.config.proxy.routes.len(),
+                "   Reverse proxy: ENABLED"
+            );
+            app.layer(axum::middleware::from_fn_with_state(
+                svc,
+                crate::proxy::handler::intercept,
+            ))
+        } else {
+            app
+        };
+
         router::apply_global_middleware(
             app,
             self.state.clone(),

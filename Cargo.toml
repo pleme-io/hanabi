@@ -196,6 +196,13 @@ pin-project-lite = "0.2" # Zero-cost pin projection for async streams
 # HTTP types
 http = "1.0"
 hyper = "1.0"
+# Only for `TokioIo`. hyper 1.x's `Upgraded` implements hyper's OWN
+# `rt::Read`/`rt::Write`, not tokio's `AsyncRead`/`AsyncWrite`, so tunnelling an
+# upgraded connection with `tokio::io::copy` needs the adapter. Already resolved
+# at 0.1.20 transitively through axum and reqwest — this makes an existing edge
+# explicit rather than pulling new code into the closure. Writing the adapter by
+# hand would be reimplementing TokioIo's pin plumbing for no gain.
+hyper-util = { version = "0.1", features = ["tokio"] }
 
 # jemalloc allocator for 5x faster multi-threaded allocation
 # Optional: enabled via feature flag, configured in Nix build

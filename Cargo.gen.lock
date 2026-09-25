@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "cargo_lock_sha256": "c3235f3abcecd31c0841e2f1db6c4c3ba7142c76dba9dd0e4a5bce126c1aa372",
+  "cargo_lock_sha256": "79f40fa0a091c3b1d216696e06410ac3112fb747033a5e5982aa2aa76f90ff15",
   "manifest_sha256": {
-    "Cargo.toml": "b63a2bf132d8fa05844b7118b84ce0683fe55708126d8775d30bb772c52c5b67"
+    "Cargo.toml": "6563f3099b54d580c4286941af69753cdfaa7da485bc987153e88da9bb1c8d90"
   },
   "target_resolves": {
     "base": {
@@ -4393,6 +4393,18 @@
             "package_key": "hyper-1.10.1",
             "kind": "normal",
             "features": [],
+            "uses_default_features": true,
+            "optional": false,
+            "target": null,
+            "tree": "target"
+          },
+          {
+            "name": "hyper_util",
+            "package_key": "hyper-util-0.1.20",
+            "kind": "normal",
+            "features": [
+              "tokio"
+            ],
             "uses_default_features": true,
             "optional": false,
             "target": null,
