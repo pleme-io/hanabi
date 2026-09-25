@@ -240,10 +240,14 @@ k6 run load-tests/graphql-load-test.js
 
 ## Project Structure
 
-> **★ Two modules are DARK** — `src/l4/` and `src/mesh/`. They compile, they
-> have tests, and **nothing constructs them**. `src/proxy/` was the third until
-> 2026-09-24 and is now **WIRED**: it is constructed from `config.proxy` and
-> carries WebSocket upgrades.
+> **★ One module is DARK** — `src/mesh/`. It compiles, it has tests, and
+> **nothing constructs it**; it also duplicates the federation circuit breaker
+> that actually runs, so it should be retired rather than wired.
+>
+> `src/proxy/` and `src/l4/` were both dark until 2026-09-24 and are now
+> **WIRED** — proxy from `config.proxy` (carrying WebSocket upgrades), l4 from
+> `config.l4` (raw TCP, for things no L7 proxy can carry). Both default to
+> **off**, so an existing config behaves exactly as before.
 >
 > All three were absent from this table until 2026-09-24, which meant a reader
 > of the README could not learn they exist and a reader of `lib.rs` could not
@@ -280,7 +284,7 @@ k6 run load-tests/graphql-load-test.js
 | `src/providers/` | Pluggable provider implementations |
 | `src/traits.rs` | Extension traits (OAuthProvider, WebhookHandler, RouteExtension) |
 | `src/proxy/` | L7 reverse proxy — **WIRED (2026-09-24):** built from `config.proxy.enabled`, layered ahead of routing so it claims only matching paths, and carries `Upgrade`/WebSocket. No TLS termination (by decision); least-connections falls back to round-robin |
-| `src/l4/` | L4 TCP balancer — **DARK: library-only, absent from the binary; no UDP** |
+| `src/l4/` | L4 TCP proxy — **WIRED (2026-09-24):** `mod l4;` ships it, `config.l4.enabled` turns it on, listeners share the server's shutdown broadcast. Static `upstreams` per proxy (no catalog needed). UDP still unimplemented and refused **per proxy at spawn**, not at parse, so one `protocol: udp` entry cannot stop the config loading |
 | `src/mesh/` | Circuit breaker + retry backoff — **DARK: library-only, and a duplicate of the wired `federation/load_shedding.rs`** |
 | `config/` | Example YAML config and config documentation |
 | `tests/` | Integration tests (federation, entity resolution, schema validation) |

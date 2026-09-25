@@ -22,6 +22,18 @@ mod degraded;
 mod error;
 mod federation;
 mod handlers;
+// ── ★ l4 is now IN THE SHIPPED BINARY ─────────────────────────────────────
+// Its absence here was the whole reason `src/l4` was dark: `run_tcp_proxy` was
+// implemented, tested and compiled only into the library target, so the
+// executable could not have run it under any configuration. Adding the
+// declaration is additive — `AppConfig.l4` defaults to `enabled: false`, so a
+// node that has not asked for an L4 listener behaves exactly as before.
+//
+// It exists because not everything a front door carries is HTTP: Google Cast's
+// control channel is a protobuf protocol over TLS on :8009, which no L7 proxy
+// can carry, while the media fetch beside it is plain HTTP that `proxy` already
+// handles. One device, two layers.
+mod l4;
 mod health;
 mod health_aggregator;
 pub mod images;

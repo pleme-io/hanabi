@@ -44,12 +44,6 @@ use std::path::{Path, PathBuf};
 /// being tracked, not a state being blessed.
 const EXPECTED_DARK: &[(&str, &str)] = &[
     (
-        "l4",
-        "TCP balancer. Library-only — there is no `mod l4;` in main.rs, so it \
-         is absent from the shipped binary. `AppConfig` has no `l4` field and \
-         no backends are ever populated. UDP does not exist at all.",
-    ),
-    (
         "mesh",
         "Circuit breaker + retry backoff. Library-only, and a duplicate of the \
          live per-subgraph federation::load_shedding::CircuitBreakerRegistry \
@@ -90,13 +84,46 @@ const EXPECTED_CONFIG_ONLY: &[(&str, &str, &str)] = &[];
 /// slice passes while measuring nothing, which is the shape of a blind test.
 /// Pinning the wired tier means REMOVING the wiring also fails the gate — so
 /// the graduation cannot be silently undone by a later refactor.
-const EXPECTED_WIRED: &[(&str, &str, &str)] = &[(
-    "proxy",
-    "ProxyService",
-    "L7 reverse proxy. Constructed in builder.rs behind `config.proxy.enabled` \
-     and layered ahead of routing so it claims only matching paths; `Upgrade` \
-     is carried by proxy::upgrade, which is what unblocked the \
-     websocket-driven home UIs.",
+const EXPECTED_WIRED: &[(&str, &str, &str)] = &[
+    (
+        "proxy",
+        "ProxyService",
+        "L7 reverse proxy. Constructed in builder.rs behind `config.proxy.enabled` \
+         and layered ahead of routing so it claims only matching paths; `Upgrade` \
+         is carried by proxy::upgrade, which is what unblocked the \
+         websocket-driven home UIs.",
+    ),
+];
+
+/// Modules wired by a CALL rather than by constructing a type.
+///
+/// ── ★ THE TIER THE GATE COULD NOT SEE ─────────────────────────────────────
+/// `EXPECTED_WIRED` asks "is this type constructed outside its own directory",
+/// which is the right question for `proxy` (`ProxyService::new` in builder.rs)
+/// and the WRONG one for `l4`. l4 is wired by `server::run_server` calling
+/// `l4::spawn_all(&config.l4, &shutdown_tx)`; every type it touches —
+/// `L4BackendPool`, `L4Backend` — is constructed *inside* `src/l4/`, by that
+/// function. So a constructor-shaped check reports l4 as unwired while it is
+/// listening on a socket.
+///
+/// The gate found this itself: moving l4 into `EXPECTED_WIRED` failed with
+/// "`L4BackendPool` is NO LONGER constructed outside src/l4/", which is true and
+/// was never going to become false. A wiring predicate that can only see `Type::new`
+/// cannot describe a module whose entry point is a free function, and quietly
+/// widening the constructor check would have made it match more things while
+/// meaning less.
+const EXPECTED_WIRED_BY_CALL: &[(&str, &str, &str)] = &[(
+    "l4",
+    "l4::spawn_all",
+    "Raw TCP proxying. `mod l4;` is in main.rs so it ships in the binary, \
+     `AppConfig.l4` deserializes, and `server::run_server` calls `l4::spawn_all` \
+     behind `l4.enabled` — sharing the ONE shutdown broadcast, because a raw TCP \
+     session cut at process exit leaves its peer hanging rather than retrying. \
+     Motivating case: Google Cast's control channel is protobuf over TLS on \
+     :8009, which no L7 proxy can carry, while the media fetch beside it is \
+     plain HTTP that `proxy` already handles. UDP still has no implementation \
+     and is refused PER PROXY at spawn rather than at parse, so one unsupported \
+     entry cannot stop the whole config from loading.",
 )];
 
 fn src_dir() -> PathBuf {
@@ -240,14 +267,24 @@ fn the_binary_and_library_module_sets_are_reported() {
         );
     }
 
-    // The one structural claim worth asserting: `l4` is genuinely absent from
-    // the binary. If someone adds `mod l4;` to main.rs without wiring it, that
-    // is a change in kind and the docs must follow.
+    // ── CORRECTED 2026-09-24: l4 IS in the binary now, and that is asserted ──
+    //
+    // This used to assert `!in_binary("l4")` with the message "if someone adds
+    // `mod l4;` without wiring it, the docs must follow". It fired exactly as
+    // designed when `mod l4;` landed, and naming the two files to fix is what
+    // made the follow-through cheap.
+    //
+    // The assertion is INVERTED rather than deleted, because the claim is still
+    // worth defending in the other direction: l4 is now part of the shipped
+    // binary, and if it silently left again — a refactor dropping the `mod`
+    // line — every doc saying "wired" would become false with nothing noticing.
     assert!(
-        !in_binary(&main, "l4"),
-        "`mod l4;` has appeared in main.rs. l4 is now shipped in the binary — \
-         update src/l4/mod.rs's tier header and README.md, which both state it \
-         is library-only."
+        in_binary(&main, "l4"),
+        "`mod l4;` has DISAPPEARED from main.rs. l4 is no longer in the shipped \
+         binary, so `l4.enabled = true` would be a config that cannot do \
+         anything. Either restore the declaration, or move l4 back to \
+         EXPECTED_DARK and correct src/l4/mod.rs's header, src/lib.rs, README.md \
+         and theory/VOCABULARY.md."
     );
     assert!(
         in_binary(&main, "proxy"),
@@ -338,5 +375,42 @@ fn wired_modules_are_actually_constructed() {
              regressed. Either restore it, or move the entry down a tier and say \
              so in src/lib.rs, README.md and theory/VOCABULARY.md."
         );
+    }
+}
+
+/// The call-wired tier, asserted the same way — in both directions.
+#[test]
+fn call_wired_modules_are_actually_called() {
+    let root = src_dir();
+
+    assert!(
+        !EXPECTED_WIRED_BY_CALL.is_empty(),
+        "EXPECTED_WIRED_BY_CALL is empty -- nothing asserted means nothing measured"
+    );
+
+    for (module, call, _why) in EXPECTED_WIRED_BY_CALL {
+        // The entry point's own name, e.g. `spawn_all` from `l4::spawn_all`.
+        let func = call.rsplit("::").next().expect("a non-empty call path");
+
+        let needle = format!("{func}(");
+        let callers: Vec<_> = rs_files_excluding(&root, module)
+            .into_iter()
+            .filter(|path| {
+                std::fs::read_to_string(path)
+                    .map(|body| body.contains(&needle))
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        assert!(
+            !callers.is_empty(),
+            "`{call}` is called from NOWHERE outside src/{module}/ -- the module is \
+             back to being dark, and `{module}.enabled = true` would be a config \
+             that cannot do anything. Restore the call site, or move the entry to \
+             EXPECTED_DARK and correct src/{module}/mod.rs's header, src/lib.rs, \
+             README.md and theory/VOCABULARY.md."
+        );
+
+        println!("call-wired {module:<8} <- {} caller(s)", callers.len());
     }
 }

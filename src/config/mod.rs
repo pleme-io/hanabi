@@ -61,6 +61,21 @@ pub struct AppConfig {
     #[serde(default)]
     pub proxy: crate::proxy::ProxyConfig,
 
+    /// L4 (raw TCP) proxies. `#[serde(default)]` and `enabled: false` by
+    /// default, so every existing config loads byte-identically and no node
+    /// gains a listener it did not ask for.
+    ///
+    /// Exists because not everything a front door must carry is HTTP. The
+    /// motivating case is Google Cast: its control channel is a protobuf
+    /// protocol over TLS on :8009, so an L7 proxy cannot carry it, while the
+    /// media fetch beside it is plain HTTP and `proxy` handles that fine. One
+    /// device, two layers.
+    ///
+    /// Until this field existed, `L4Config` was a type nothing deserialized and
+    /// `src/l4` was absent from the shipped binary entirely.
+    #[serde(default)]
+    pub l4: crate::l4::L4Config,
+
     /// Environment identifier (e.g., "production", "staging", "development")
     #[serde(default = "default_environment")]
     pub environment: String,

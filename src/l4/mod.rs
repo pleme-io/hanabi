@@ -1,31 +1,40 @@
 //! L4 TCP load balancer for non-HTTP services.
 //!
-//! ── ★ TIER: LIBRARY-ONLY. NOT IN THE SHIPPED BINARY. ─────────────────────
-//! `main.rs` has `mod proxy;` and **no `mod l4;`**, so nothing here is
-//! compiled into the `hanabi` executable — only into the library target for
-//! tests. Nothing constructs any of it, `AppConfig` has no `l4` field, and
-//! `L4BackendPool::update` is never called, so even if a listener ran every
-//! connection would be dropped at `next()` returning `None`.
+//! ── ★ TIER: WIRED as of 2026-09-24. IN THE SHIPPED BINARY. ───────────────
+//! `main.rs` has `mod l4;`, `AppConfig.l4` deserializes, and
+//! `server::run_server` calls [`spawn_all`] behind `l4.enabled` — sharing the
+//! ONE shutdown broadcast the HTTP servers use. This header said "LIBRARY-ONLY,
+//! NOT IN THE SHIPPED BINARY" until that landed, and the gate
+//! (`tests/dark_modules_test.rs`) is what forced it to be corrected in the same
+//! change rather than aging into a lie.
 //!
-//! This header previously said raw connections were "proxied … **Used for**
-//! databases, NATS, Redis", which asserts live use of code that does not ship.
-//! Adopting the honesty of `crate::proxy`'s header instead: say the tier, then
-//! say the intent.
+//! **Why it exists**: not everything a front door must carry is HTTP. The
+//! motivating case is Google Cast, whose control channel is a protobuf protocol
+//! over TLS on **:8009** — no L7 proxy can carry that — while the media fetch
+//! beside it is plain HTTP that `crate::proxy` already handles. One device, two
+//! layers. Databases, NATS and Redis are the same shape.
 //!
-//! **Intent** (not yet true): proxy raw TCP connections to backend pools
-//! discovered from tatara's service catalog, for databases, NATS, Redis and
-//! the other non-HTTP services a front door must carry.
+//! **Default OFF.** `L4Config::enabled` is `false` and the field is
+//! `#[serde(default)]`, so every existing config loads byte-identically and no
+//! node gains a listener it did not ask for.
 //!
-//! **UDP is absent.** `L4Proxy.protocol` defaults to `"tcp"` and will happily
-//! deserialize `"udp"`, for which there is no code path at all — a `udp` entry
-//! is silently inert. DNS and MQTT both want it; implementing it or rejecting
-//! it at parse time are both acceptable, silence is not.
+//! ── L4 IS STATEFUL, AND THAT CHANGES THE LIFECYCLE ──────────────────────
+//! An L7 request is independent and retryable; a TCP tunnel is a live session
+//! whose peer notices when it dies. So [`run_tcp_proxy`] takes a shutdown
+//! receiver and stops ACCEPTING on the signal, while in-flight tunnels finish on
+//! their own tasks — a Cast control channel cut at process exit is a speaker
+//! unresponsive until it reconnects, not a request the client retries.
 //!
-//! What IS implemented and correct: [`run_tcp_proxy`] binds a listener,
-//! accepts in a loop, and bidirectionally copies to a selected backend. That
-//! copy loop is the same shape `crate::proxy` needs for websocket upgrades.
-//! It has no shutdown hook — its accept loop never returns, so it cannot
-//! participate in graceful drain until it takes a shutdown receiver.
+//! **UDP still has no implementation**, and the refusal is deliberately at
+//! SPAWN rather than at parse. `L4Proxy.protocol` stays a `String` so nothing
+//! that parsed before stops parsing — a narrowed enum would let one ignored
+//! `protocol: udp` line stop hanabi loading its config at all. [`spawn_all`]
+//! skips that one entry, names it, and keeps every TCP proxy in the same
+//! document running. See [`L4Transport`].
+//!
+//! Backends come from each proxy's static `upstreams`; catalog discovery can
+//! still drive [`L4BackendPool::update`] where a catalog exists, and a house has
+//! none to poll.
 
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -47,25 +56,85 @@ pub struct L4Config {
     pub proxies: Vec<L4Proxy>,
 }
 
+/// What a declared `protocol` string means to the code — a DERIVED view.
+///
+/// ── ★ THE WIRE FORMAT IS UNCHANGED, DELIBERATELY ──────────────────────────
+/// `L4Proxy.protocol` stays a `String`, exactly as it has always been, and this
+/// enum is a projection of it. Two drafts of this change were more type-strict
+/// and both were wrong:
+///
+///   1. a closed enum `{ Tcp }` — then `protocol: udp` fails to parse, and serde
+///      rejects the WHOLE document on one unknown variant, so a single line that
+///      was previously ignored now stops hanabi loading its config at all.
+///   2. `{ Tcp, Udp }` — better, but still narrows the surface: `protocol: sctp`
+///      used to parse and be inert, and would now be a boot failure.
+///
+/// Both converted a silently-ignored value into a service that will not start.
+/// That is a regression dressed as rigour — the same shape as the omoya trap
+/// where one unrecognised field rejected an entire file. **Behaviour is
+/// additive: nothing that parsed before may stop parsing.**
+///
+/// So the parse boundary accepts everything it always did, and the TYPING moves
+/// one layer in: the code matches on this, and [`spawn_all`] refuses an
+/// unsupported transport *per proxy*, by name, while every TCP proxy in the same
+/// document keeps running. What was added is the diagnosis; what was removed is
+/// nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum L4Transport {
+    /// The one transport implemented.
+    Tcp,
+    /// Anything else — parsed, carried, and refused at spawn with its own name
+    /// so the message can say which proxy and which word. UDP is the expected
+    /// member (DNS and MQTT want it); it is connectionless, so implementing it
+    /// means a NAT-style flow table rather than an accepted socket.
+    Unsupported(String),
+}
+
 /// A single L4 proxy definition.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct L4Proxy {
     /// Human-readable name.
     pub name: String,
 
-    /// Protocol (tcp or udp).
+    /// Protocol (tcp or udp), as written. A `String` on purpose — see
+    /// [`L4Transport`] for why narrowing this type would be a regression. Read
+    /// it through [`Self::transport`], never by comparing strings at call sites.
     #[serde(default = "default_protocol")]
     pub protocol: String,
 
     /// Local listen address and port.
     pub listen: String,
 
-    /// Target service name in tatara catalog.
+    /// Pool key. With `upstreams` empty this is also the tatara catalog service
+    /// name to discover; with `upstreams` set it is just the name.
     pub service: String,
+
+    /// Static upstreams as `host:port`, for a node with no service catalog.
+    ///
+    /// The same arm `ProxyRoute::upstreams` carries, and for the same reason:
+    /// catalog discovery is the right shape for a cluster and the WRONG shape
+    /// for a house, where every upstream is a fixed address on a LAN and there
+    /// is no catalog to ask. Without this there is no code path at all for the
+    /// machines this proxy would actually front.
+    #[serde(default)]
+    pub upstreams: Vec<String>,
 }
 
 fn default_protocol() -> String {
     "tcp".to_string()
+}
+
+impl L4Proxy {
+    /// The declared protocol as a typed view. Case-insensitive, because a config
+    /// is hand-written and `TCP` meaning something different from `tcp` would be
+    /// a trap rather than a feature.
+    pub fn transport(&self) -> L4Transport {
+        if self.protocol.trim().eq_ignore_ascii_case("tcp") {
+            L4Transport::Tcp
+        } else {
+            L4Transport::Unsupported(self.protocol.clone())
+        }
+    }
 }
 
 /// Backend address for L4 proxying.
@@ -109,17 +178,53 @@ impl L4BackendPool {
     }
 }
 
+/// `host:port` → an [`L4Backend`]. Returns None rather than guessing a port.
+///
+/// Mirrors `proxy::parse_upstream` deliberately, including the refusal to
+/// default a port: on a home node every upstream is a distinct loopback or LAN
+/// port, so a silently-defaulted 80 would proxy to the wrong service.
+pub fn parse_upstream(s: &str) -> Option<L4Backend> {
+    let (host, port) = s.rsplit_once(':')?;
+    let port: u16 = port.parse().ok()?;
+    if host.is_empty() {
+        return None;
+    }
+    Some(L4Backend {
+        address: host.to_string(),
+        port,
+    })
+}
+
 /// Run a TCP proxy listener, forwarding connections to backends.
+///
+/// ── ★ WHY THE SHUTDOWN RECEIVER IS NOT OPTIONAL ───────────────────────────
+/// The accept loop used to be `loop { listener.accept().await? }`, which never
+/// returns — so this could not participate in graceful drain, and a task
+/// spawned with it would be killed mid-connection at process exit.
+///
+/// That matters more at L4 than at L7 because **L4 is stateful**. An HTTP
+/// request is independent and retryable; a TCP tunnel is a live session whose
+/// peer notices when it dies. A Cast control channel dropped without warning is
+/// a speaker that goes unresponsive until it re-connects, not a request the
+/// client retries. So the listener stops ACCEPTING on the shutdown signal, and
+/// in-flight tunnels are left to finish on their own tasks.
 pub async fn run_tcp_proxy(
     listen_addr: &str,
     pool: Arc<L4BackendPool>,
     name: &str,
+    mut shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let listener = TcpListener::bind(listen_addr).await?;
     info!(name, listen = %listen_addr, "L4 TCP proxy listening");
 
     loop {
-        let (inbound, peer_addr) = listener.accept().await?;
+        let (inbound, peer_addr) = tokio::select! {
+            accepted = listener.accept() => accepted?,
+            _ = shutdown.recv() => {
+                info!(name, listen = %listen_addr, "L4 TCP proxy draining — no longer accepting");
+                return Ok(());
+            }
+        };
         let pool = pool.clone();
         let name = name.to_string();
 
@@ -169,6 +274,91 @@ pub async fn run_tcp_proxy(
     }
 }
 
+/// Spawn every configured L4 proxy, returning their join handles.
+///
+/// The entry point that makes this module part of the binary rather than a
+/// library nobody calls. Called from `server::run_server`, which already owns
+/// the shutdown broadcast — so the listeners share the one drain signal the HTTP
+/// servers use instead of inventing a second lifecycle.
+///
+/// Pools are seeded from each proxy's STATIC `upstreams`. Catalog discovery is
+/// deliberately not wired here: a node with a tatara catalog can have its pool
+/// updated through [`L4BackendPool::update`] by whatever polls the catalog, and
+/// a house has no catalog to poll. Seeding statically is what makes the module
+/// useful on the machines it would actually front.
+///
+/// A proxy with no resolvable upstreams is SKIPPED with a warning rather than
+/// bound: a listener whose pool is empty accepts connections and drops every one
+/// of them at `next()` returning `None`, which looks like a network fault from
+/// the client and like success from the process.
+pub fn spawn_all(
+    config: &L4Config,
+    shutdown: &tokio::sync::broadcast::Sender<()>,
+) -> Vec<tokio::task::JoinHandle<()>> {
+    if !config.enabled {
+        return Vec::new();
+    }
+
+    let mut handles = Vec::new();
+    for proxy in &config.proxies {
+        // ── The UDP refusal, located and per-proxy ─────────────────────────
+        // Skipping THIS entry rather than failing the whole config is the
+        // difference between "your MQTT-over-UDP proxy is not running, here is
+        // its name" and "hanabi did not start". Every TCP proxy in the same
+        // document keeps working, which is what makes the diagnosis safe to
+        // ship: no feature that worked before stops working now.
+        if let L4Transport::Unsupported(p) = proxy.transport() {
+            warn!(
+                name = %proxy.name,
+                listen = %proxy.listen,
+                protocol = %p,
+                "L4 proxy declares a protocol that is NOT IMPLEMENTED — skipping this \
+                 entry and continuing. It was silently inert before this message \
+                 existed and it is still inert, but now it names itself. UDP is the \
+                 expected case: connectionless, so it needs a flow table rather than \
+                 an accepted socket."
+            );
+            continue;
+        }
+
+        let backends: Vec<L4Backend> = proxy.upstreams.iter().filter_map(|u| parse_upstream(u)).collect();
+
+        if backends.len() != proxy.upstreams.len() {
+            warn!(
+                name = %proxy.name,
+                declared = proxy.upstreams.len(),
+                parsed = backends.len(),
+                "some L4 upstreams are not `host:port` and were dropped"
+            );
+        }
+
+        if backends.is_empty() {
+            warn!(
+                name = %proxy.name,
+                listen = %proxy.listen,
+                "L4 proxy has no usable upstreams — NOT binding a listener, because \
+                 one with an empty pool accepts and then drops every connection"
+            );
+            continue;
+        }
+
+        let pool = Arc::new(L4BackendPool::new());
+        let listen = proxy.listen.clone();
+        let name = proxy.name.clone();
+        let rx = shutdown.subscribe();
+        let seed = backends;
+
+        handles.push(tokio::spawn(async move {
+            pool.update(seed).await;
+            if let Err(e) = run_tcp_proxy(&listen, pool, &name, rx).await {
+                error!(name = %name, listen = %listen, error = %e, "L4 proxy exited with an error");
+            }
+        }));
+    }
+
+    handles
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,5 +385,125 @@ mod tests {
         assert_eq!(b1.address, "10.0.0.1");
         assert_eq!(b2.address, "10.0.0.2");
         assert_eq!(b3.address, "10.0.0.1");
+    }
+
+    fn proxy(protocol: &str, upstreams: &[&str]) -> L4Proxy {
+        L4Proxy {
+            name: "cast".into(),
+            protocol: protocol.into(),
+            listen: "127.0.0.1:0".into(),
+            service: "cast".into(),
+            upstreams: upstreams.iter().map(|s| (*s).to_string()).collect(),
+        }
+    }
+
+    // ★ THE ADDITIVE GUARANTEE. Every protocol string that parsed before this
+    // change must still parse — a narrowed enum would have made one ignored
+    // line stop the whole service from loading its config.
+    #[test]
+    fn any_protocol_string_still_deserializes() {
+        for p in ["tcp", "udp", "TCP", "sctp", "nonsense", ""] {
+            let yaml = format!(
+                "name: x\nprotocol: {p}\nlisten: 127.0.0.1:1\nservice: s\n"
+            );
+            let parsed: Result<L4Proxy, _> = serde_yaml::from_str(&yaml);
+            assert!(
+                parsed.is_ok(),
+                "protocol {p:?} must still parse -- narrowing the wire format turns \
+                 a previously-ignored line into a service that will not boot"
+            );
+        }
+    }
+
+    #[test]
+    fn the_protocol_is_typed_where_the_code_reads_it() {
+        assert_eq!(proxy("tcp", &[]).transport(), L4Transport::Tcp);
+        // Case-insensitive: a hand-written config saying TCP means tcp.
+        assert_eq!(proxy("TCP", &[]).transport(), L4Transport::Tcp);
+        assert_eq!(proxy(" tcp ", &[]).transport(), L4Transport::Tcp);
+        // Everything else is carried, named, and refused at spawn.
+        assert_eq!(
+            proxy("udp", &[]).transport(),
+            L4Transport::Unsupported("udp".into())
+        );
+        assert_eq!(
+            proxy("sctp", &[]).transport(),
+            L4Transport::Unsupported("sctp".into())
+        );
+    }
+
+    #[test]
+    fn a_missing_protocol_defaults_to_tcp() {
+        let parsed: L4Proxy =
+            serde_yaml::from_str("name: x\nlisten: 127.0.0.1:1\nservice: s\n").unwrap();
+        assert_eq!(parsed.protocol, "tcp");
+        assert_eq!(parsed.transport(), L4Transport::Tcp);
+        assert!(parsed.upstreams.is_empty(), "upstreams defaults to empty");
+    }
+
+    // Disabled config must spawn NOTHING. This is the guarantee that makes the
+    // whole change safe to ship: an existing node gains no listener.
+    #[test]
+    fn disabled_l4_spawns_no_listeners() {
+        let (tx, _rx) = tokio::sync::broadcast::channel::<()>(1);
+        let cfg = L4Config {
+            enabled: false,
+            proxies: vec![proxy("tcp", &["127.0.0.1:9"])],
+        };
+        assert!(
+            spawn_all(&cfg, &tx).is_empty(),
+            "enabled: false must bind nothing, whatever the proxies say"
+        );
+    }
+
+    // An unsupported transport skips ONE entry and leaves the rest alone --
+    // "your udp proxy is not running" rather than "hanabi did not start".
+    #[tokio::test]
+    async fn an_unsupported_protocol_skips_only_its_own_entry() {
+        let (tx, _rx) = tokio::sync::broadcast::channel::<()>(1);
+        let cfg = L4Config {
+            enabled: true,
+            proxies: vec![
+                proxy("udp", &["127.0.0.1:9"]),
+                L4Proxy {
+                    name: "tcp-one".into(),
+                    ..proxy("tcp", &["127.0.0.1:9"])
+                },
+            ],
+        };
+        let handles = spawn_all(&cfg, &tx);
+        assert_eq!(
+            handles.len(),
+            1,
+            "the udp entry is skipped; the tcp entry beside it still runs"
+        );
+        let _ = tx.send(());
+        for h in handles {
+            let _ = h.await;
+        }
+    }
+
+    // A listener with an empty pool would accept and then drop every
+    // connection, which looks like a network fault to the client and like
+    // success to the process. Refuse to bind instead.
+    #[test]
+    fn a_proxy_with_no_usable_upstreams_is_not_bound() {
+        let (tx, _rx) = tokio::sync::broadcast::channel::<()>(1);
+        let cfg = L4Config {
+            enabled: true,
+            // Neither is `host:port`, so both are dropped and the pool is empty.
+            proxies: vec![proxy("tcp", &["no-port", ":8009"])],
+        };
+        assert!(spawn_all(&cfg, &tx).is_empty());
+    }
+
+    #[test]
+    fn upstreams_parse_like_the_l7_ones() {
+        assert_eq!(parse_upstream("10.0.0.5:8009").unwrap().addr(), "10.0.0.5:8009");
+        // No guessed port, no empty host -- a defaulted 80 would proxy to the
+        // wrong service on a node where every upstream is a distinct port.
+        assert!(parse_upstream("10.0.0.5").is_none());
+        assert!(parse_upstream(":8009").is_none());
+        assert!(parse_upstream("10.0.0.5:not-a-port").is_none());
     }
 }

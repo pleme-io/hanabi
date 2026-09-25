@@ -86,14 +86,19 @@ pub mod traits;
 //          Still absent: TLS termination (`Backend::url()` is http:// by
 //          decision) and least-connections balancing (falls back to
 //          round-robin, as it always did).
-//   l4     LIBRARY-ONLY, still dark. There is no `mod l4;` in main.rs, so this
-//          is not in the shipped binary at all. `run_tcp_proxy` is genuinely
-//          implemented; nothing calls it, no `l4` field exists on AppConfig,
-//          no backends are ever populated, and UDP is absent entirely.
-//          `proxy::upgrade::tunnel` deliberately reuses its copy-loop SHAPE
-//          rather than calling into it — the handshake, not the byte pump, is
-//          what an upgrade needs, and importing a dark module to get a loop
-//          would have made it look reached without making it work.
+//   l4     WIRED as of 2026-09-24, by a CALL rather than a constructor:
+//          `mod l4;` ships it, `AppConfig.l4` deserializes, and
+//          `server::run_server` calls `l4::spawn_all` behind `l4.enabled`,
+//          sharing the one shutdown broadcast. It exists because Google Cast's
+//          control channel is protobuf over TLS on :8009 and no L7 proxy can
+//          carry that, while the media fetch beside it is plain HTTP `proxy`
+//          already handles. Default OFF, so an existing config is unchanged.
+//          UDP is still unimplemented and refused PER PROXY at spawn, never at
+//          parse — narrowing the wire format would let one ignored line stop
+//          the whole config loading.
+//          `proxy::upgrade::tunnel` still reuses its copy-loop SHAPE rather
+//          than calling into it: the handshake, not the byte pump, is what an
+//          upgrade needs.
 //   mesh   LIBRARY-ONLY, and a DUPLICATE. Its CircuitBreaker is a simpler
 //          unused copy of the live, tested, per-subgraph
 //          `federation::load_shedding::CircuitBreakerRegistry` that

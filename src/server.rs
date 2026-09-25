@@ -158,6 +158,20 @@ pub async fn run_server(
 
     let (shutdown_tx, _) = tokio::sync::broadcast::channel::<()>(1);
 
+    // ── L4 proxies share the ONE drain signal ──────────────────────────────
+    // Spawned here rather than anywhere else precisely because this function
+    // already owns `shutdown_tx`. A second lifecycle would mean the raw-TCP
+    // listeners kept accepting while the HTTP servers drained — and L4 is
+    // stateful, so an abandoned tunnel is a peer left hanging rather than a
+    // request the client retries.
+    //
+    // Config-gated and empty by default: `l4.enabled = false` returns no
+    // handles, so a node that has not asked for L4 is byte-identical to before.
+    let l4_handles = crate::l4::spawn_all(&config.l4, &shutdown_tx);
+    if !l4_handles.is_empty() {
+        info!(count = l4_handles.len(), "✓ L4 proxies listening");
+    }
+
     let static_server = {
         let mut shutdown_rx = shutdown_tx.subscribe();
         tokio::spawn(async move {
@@ -194,6 +208,17 @@ pub async fn run_server(
     let (static_result, health_result) = tokio::join!(static_server, health_server);
     static_result??;
     health_result??;
+
+    // L4 listeners stop ACCEPTING on the same signal; await them so the process
+    // does not exit while one is still unwinding. In-flight tunnels live on
+    // their own spawned tasks and are allowed to finish — a raw TCP session cut
+    // at process exit leaves the peer hanging, which for a Cast control channel
+    // means a speaker unresponsive until it reconnects.
+    for h in l4_handles {
+        if let Err(e) = h.await {
+            warn!(error = %e, "an L4 proxy task did not shut down cleanly");
+        }
+    }
 
     info!("✓ Graceful shutdown complete");
     Ok(())
