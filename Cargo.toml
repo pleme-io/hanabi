@@ -10,7 +10,35 @@ readme = "README.md"
 description = "Hanabi (花火) - GraphQL Federation BFF platform service"
 keywords = ["graphql", "federation", "bff", "gateway", "axum"]
 categories = ["web-programming::http-server", "network-programming"]
-exclude = ["module/", "target/", "result-*", "Cargo.nix", "flake.*", "hanabi-lint/", "load-test-results.json"]
+exclude = ["target/", "result-*", "Cargo.nix", "flake.*", "hanabi-lint/", "load-test-results.json"]
+
+# ── The module trio, so a node can RUN hanabi declaratively ─────────────────
+#
+# substrate's unified rust shape (`mk-rust-tool-flake.nix`, which
+# `substrate.rust.service` is a `shape = "service"` call into) emits
+# `nixosModules` / `darwinModules` / `homeManagerModules` only when its
+# `module` argument is non-null — and it sources that from THIS table when the
+# flake does not pass one explicitly. hanabi's flake passes only `src`, so
+# without this section `module ? null` held and the flake emitted no module at
+# all.
+#
+# The consequence was concrete: hanabi shipped `module/default.nix` and
+# `module/nixos.nix`, written for the LEGACY `rust-service-flake.nix` entry
+# point (the one taking `moduleDir ? ./module` — its own usage example is
+# literally `serviceName = "hanabi"`). The flake had since moved to the unified
+# shape, whose `module` is a SPEC rather than a directory, so those two files
+# were unreachable: a module surface that looked deployable and could not be
+# imported by anything. They are deleted in this change, because the factory
+# generates exactly what they hand-wrote (`enable` / `package` / `configFile` /
+# `logLevel` / `extraEnv`) and git holds the history.
+#
+# `with-system-daemon` and not the HM user daemon: hanabi is a front door
+# binding a privileged port for the whole machine, not a per-operator tool.
+# That is the exception the module-trio guidance asks to be argued rather than
+# defaulted.
+[package.metadata.pleme]
+description = "Hanabi — GraphQL Federation BFF platform service (Rust/Axum)"
+with-system-daemon = true
 
 [lib]
 name = "hanabi"
