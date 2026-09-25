@@ -26,11 +26,25 @@
 //! unresponsive until it reconnects, not a request the client retries.
 //!
 //! **UDP still has no implementation**, and the refusal is deliberately at
-//! SPAWN rather than at parse. `L4Proxy.protocol` stays a `String` so nothing
-//! that parsed before stops parsing — a narrowed enum would let one ignored
-//! `protocol: udp` line stop hanabi loading its config at all. [`spawn_all`]
-//! skips that one entry, names it, and keeps every TCP proxy in the same
-//! document running. See [`L4Transport`].
+//! SPAWN rather than at parse. `L4Proxy.protocol` stays a `String` with
+//! [`L4Transport`] as a derived view; [`spawn_all`] skips an unsupported
+//! transport per-proxy, names it, and keeps every TCP proxy in the same document
+//! listening.
+//!
+//! **The reason is blast radius, not backward compatibility.** An earlier draft
+//! of this comment justified the open scalar as "nothing that parsed before stops
+//! parsing", which is the wrong test — it would license a narrowed enum on any
+//! field no operator had used yet. The actual rule
+//! (`theory/UNREPRESENTABILITY.md` §II.2.1) is that a refusal must be scoped to
+//! the bad state it names: `proxies` is a list of INDEPENDENT entries, so the
+//! document is not the unit of use, and a parse-time rejection would take every
+//! valid proxy beside the bad one down with it — hanabi failing to boot over one
+//! line it was already ignoring.
+//!
+//! Tier-honest: rejecting `udp` at parse WOULD be a higher tier for that one
+//! value than refusing it at spawn. We decline to buy that tier with the whole
+//! config. The bad state is `only-mitigated` at the value; every good state
+//! beside it is preserved unconditionally.
 //!
 //! Backends come from each proxy's static `upstreams`; catalog discovery can
 //! still drive [`L4BackendPool::update`] where a catalog exists, and a house has
