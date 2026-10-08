@@ -10,6 +10,7 @@ pub struct ServerConfig {
     pub static_dir: String,
 
     /// HTTP port (default: 80)
+    #[serde(alias = "port")]
     pub http_port: u16,
 
     /// Health check port (default: 8080)
@@ -22,6 +23,7 @@ pub struct ServerConfig {
     pub service_version: String,
 
     /// Bind address (default: 0.0.0.0)
+    #[serde(alias = "host")]
     pub bind_address: String,
 
     /// Request timeout in seconds (default: 30)
@@ -300,5 +302,18 @@ no_static: true
             Some("/etc/hanabi/policy.yaml")
         );
         assert!(cfg.no_static);
+    }
+
+    #[test]
+    fn port_and_host_spellings_bind_the_http_listener() {
+        let yaml = r#"
+host: "10.0.0.1"
+port: 80
+health_port: 8080
+"#;
+        let cfg: ServerConfig = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(cfg.http_port, 80);
+        assert_eq!(cfg.health_port, 8080);
+        assert_eq!(cfg.bind_address, "10.0.0.1");
     }
 }
