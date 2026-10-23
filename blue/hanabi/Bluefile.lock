@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "bluefile_b3": "b3:9c547b296248af5c7fecaa3ca380401d54db1c1c8f61b6ad6d3855ea10a59e77",
+  "manifest": {
+    "schema": 1,
+    "name": "hanabi",
+    "version": "0.1.0",
+    "needs": {
+      "kousei": "^0.1.0",
+      "retsu": "^0.1.0"
+    },
+    "when": "anytime",
+    "sources": {},
+    "packages": [],
+    "runs": {},
+    "tools": [],
+    "checks": {},
+    "apps": {},
+    "catalog": null
+  },
+  "sources": {}
+}

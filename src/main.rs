@@ -16,6 +16,7 @@ use tracing::{info, warn};
 // Module declarations
 mod auth;
 mod bff;
+mod blue;
 mod builder;
 mod config;
 mod degraded;

@@ -150,3 +150,24 @@ If you see CSP errors in browser console:
 - [MDN: Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
 - [MDN: HSTS](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security)
 - [OWASP: Secure Headers](https://owasp.org/www-project-secure-headers/)
+
+## Blue configuration (optional)
+
+Each YAML file here has a blue spelling beside it (`example.b`,
+`spa-popup-auth.b`). Each section is one kousei entry: `section(:server, {...})`,
+`tune(:hsts, {...})` lays fields over a section, `off(:compression)` configures
+one off. A bad entry is refused alone, with a logged reason; the other sections
+stand. To load from blue, keep a YAML file that states only the selector:
+
+```yaml
+blue:
+  config:
+    enabled: true
+    source: /etc/hanabi/config.b
+  persisted_ops:
+    enabled: false
+    source: /etc/hanabi/persisted.b
+```
+
+Both default to off. Format a `.b` file with `blue fmt --write` before you ship
+it; hanabi refuses a file that is not canonical.

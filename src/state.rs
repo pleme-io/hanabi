@@ -837,6 +837,7 @@ impl AppState {
             use_hive_planner: config.bff.federation.use_hive_planner,
             subgraph_default_port: config.bff.federation.subgraph_default_port,
             subgraph_default_path: config.bff.federation.subgraph_default_path.clone(),
+            persisted_operations: crate::blue::operation_table(&config.blue.persisted_ops),
         };
 
         // Log which features are enabled

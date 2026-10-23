@@ -162,6 +162,8 @@ pub struct FederationExecutorConfig {
 
     /// Default path for subgraph endpoints when URL is not in the supergraph schema
     pub subgraph_default_path: String,
+
+    pub persisted_operations: Option<Arc<HashMap<String, String>>>,
 }
 
 impl Default for FederationExecutorConfig {
@@ -179,6 +181,7 @@ impl Default for FederationExecutorConfig {
             use_hive_planner: true, // Use Hive planner by default (more complete)
             subgraph_default_port: 8080,
             subgraph_default_path: "/graphql".to_string(),
+            persisted_operations: None,
         }
     }
 }
@@ -406,7 +409,13 @@ impl FederationExecutor {
         // Initialize APQ cache if enabled
         let apq_cache = if config.apq_enabled {
             info!("Federation APQ: enabled");
-            Some(ApqCache::new(ApqConfig::default(), metrics.clone()))
+            Some(ApqCache::new(
+                ApqConfig {
+                    persisted: config.persisted_operations.clone(),
+                    ..ApqConfig::default()
+                },
+                metrics.clone(),
+            ))
         } else {
             info!("Federation APQ: disabled");
             None
@@ -886,6 +895,11 @@ impl FederationExecutor {
                     }
                     ApqLookupResult::Invalid { message } => {
                         return FederationResponse::error(&format!("APQ error: {}", message));
+                    }
+                    ApqLookupResult::Unregistered { hash } => {
+                        debug!(operation = %operation_name, hash = %hash, "Federation: persisted operation refused");
+                        self.metrics.incr("federation.apq.refused", &[]);
+                        return FederationResponse::apq_unregistered();
                     }
                 }
             } else {
@@ -1545,6 +1559,21 @@ impl FederationResponse {
     }
 
     /// APQ not found response
+    pub fn apq_unregistered() -> Self {
+        let error = super::apq::ApqError::not_registered();
+        Self {
+            status: StatusCode::OK,
+            data: None,
+            errors: Some(vec![json!({
+                "message": error.message,
+                "extensions": {
+                    "code": error.extensions.code
+                }
+            })]),
+            extensions: None,
+        }
+    }
+
     pub fn apq_not_found() -> Self {
         Self {
             status: StatusCode::OK,

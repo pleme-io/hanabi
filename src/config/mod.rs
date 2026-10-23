@@ -14,6 +14,7 @@ mod api;
 mod bff;
 mod cache;
 mod compression;
+mod embedded_blue;
 mod features;
 mod geolocation;
 mod health;
@@ -37,6 +38,7 @@ pub use bff::{
 };
 pub use cache::CacheConfig;
 pub use compression::CompressionConfig;
+pub use embedded_blue::{BlueSource, EmbeddedBlueConfig};
 pub use features::FeaturesConfig;
 pub use geolocation::{GeoCity, GeolocationConfig};
 pub use health::{HealthAggregatorConfig, HealthCheckConfig, ServiceHealthConfig};
@@ -150,6 +152,9 @@ pub struct AppConfig {
     /// Used for subscription event source tracking in horizontal scaling
     #[serde(default = "default_pod_id")]
     pub pod_id: String,
+
+    #[serde(default)]
+    pub blue: EmbeddedBlueConfig,
 }
 
 fn default_pod_id() -> String {
@@ -183,8 +188,29 @@ impl AppConfig {
                 )
             })?;
 
-        let mut config: AppConfig = serde_yaml::from_str(&config_content)
-            .map_err(|e| format!("Failed to parse config YAML: {}", e))?;
+        let bootstrap = Self::from_yaml_str(&config_content)?;
+        let config = if bootstrap.blue.config.enabled {
+            let source = bootstrap.blue.config.path("config")?;
+            let settled = crate::blue::settle_config_file(Path::new(source))
+                .map_err(|e| format!("Failed to settle blue config {}: {}", source, e))?;
+            settled.config.with_blue(bootstrap.blue)
+        } else {
+            bootstrap
+        };
+        config.finish()
+    }
+
+    pub fn from_yaml_str(text: &str) -> Result<Self, String> {
+        serde_yaml::from_str(text).map_err(|e| format!("Failed to parse config YAML: {}", e))
+    }
+
+    pub fn with_blue(mut self, blue: EmbeddedBlueConfig) -> Self {
+        self.blue = blue;
+        self
+    }
+
+    fn finish(self) -> Result<Self, String> {
+        let mut config = self;
 
         // Auto-configure features based on environment if not explicitly set
         if config.features.enable_bug_reports.is_none() {

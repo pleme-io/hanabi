@@ -30,6 +30,7 @@
 
 // Core modules
 pub mod auth;
+pub mod blue;
 pub mod config;
 pub mod error;
 pub mod memory;

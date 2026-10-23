@@ -138,7 +138,7 @@ pub(crate) mod subscriptions;
 // ============================================================================
 // Performance Modules (internal)
 // ============================================================================
-mod apq;
+pub(crate) mod apq;
 mod batch;
 mod cache;
 pub(crate) mod cache_invalidation;

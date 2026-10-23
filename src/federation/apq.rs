@@ -39,6 +39,7 @@
 //!       require_registration: false  # If true, only pre-registered queries allowed
 //! ```
 
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -68,6 +69,8 @@ pub struct ApqConfig {
 
     /// Allow GET requests with persisted queries (for CDN caching)
     pub allow_get_requests: bool,
+
+    pub persisted: Option<Arc<HashMap<String, String>>>,
 }
 
 impl Default for ApqConfig {
@@ -78,6 +81,7 @@ impl Default for ApqConfig {
             ttl_secs: 86400, // 24 hours
             require_registration: false,
             allow_get_requests: true,
+            persisted: None,
         }
     }
 }
@@ -116,6 +120,9 @@ pub enum ApqLookupResult {
     Invalid {
         /// Error message
         message: String,
+    },
+    Unregistered {
+        hash: String,
     },
 }
 
@@ -278,6 +285,29 @@ impl ApqCache {
         }
 
         let hash = &persisted_query.sha256_hash;
+
+        if let Some(table) = &self.config.persisted {
+            let given = query.filter(|q| !q.is_empty());
+            return match table.get(hash) {
+                Some(_) if given.is_some_and(|q| Self::compute_hash(q) != *hash) => {
+                    self.metrics.incr("bff.federation.apq.hash_mismatch", &[]);
+                    ApqLookupResult::Invalid {
+                        message: "provided sha256 hash does not match query".to_string(),
+                    }
+                }
+                Some(operation) => {
+                    self.metrics.incr("bff.federation.apq.persisted_hit", &[]);
+                    ApqLookupResult::Hit {
+                        query: operation.clone(),
+                    }
+                }
+                None => {
+                    self.metrics
+                        .incr("bff.federation.apq.persisted_refused", &[]);
+                    ApqLookupResult::Unregistered { hash: hash.clone() }
+                }
+            };
+        }
 
         // Case 1: Query not provided - lookup by hash
         if query.is_none() || query.map(|q| q.is_empty()).unwrap_or(true) {
@@ -644,6 +674,67 @@ mod tests {
         // Now should succeed
         let result = cache.lookup(Some(query), Some(&extensions)).await;
         assert!(matches!(result, ApqLookupResult::Register { .. }));
+    }
+
+    fn persisted_cache() -> ApqCache {
+        let table = crate::blue::persisted_operations(
+            None,
+            include_str!("../../tests/fixtures/blue/persisted.b"),
+        )
+        .expect("the persisted fixture loads");
+        ApqCache::new(
+            ApqConfig {
+                persisted: Some(Arc::new(table.operations)),
+                ..Default::default()
+            },
+            None,
+        )
+    }
+
+    fn pq(hash: &str) -> serde_json::Value {
+        serde_json::json!({ "persistedQuery": { "version": 1, "sha256Hash": hash } })
+    }
+
+    #[tokio::test]
+    async fn persisted_table_serves_a_known_hash() {
+        let cache = persisted_cache();
+        let hash = ApqCache::compute_hash("query { users { id } }");
+        match cache.lookup(None, Some(&pq(&hash))).await {
+            ApqLookupResult::Hit { query } => assert_eq!(query, "query { users { id } }"),
+            other => panic!("expected a hit, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn persisted_table_refuses_an_unknown_hash() {
+        let cache = persisted_cache();
+        let query = "query { posts { id } }";
+        let hash = ApqCache::compute_hash(query);
+        assert!(matches!(
+            cache.lookup(None, Some(&pq(&hash))).await,
+            ApqLookupResult::Unregistered { .. }
+        ));
+        assert!(matches!(
+            cache.lookup(Some(query), Some(&pq(&hash))).await,
+            ApqLookupResult::Unregistered { .. }
+        ));
+        let mislabelled = "0".repeat(64);
+        assert!(matches!(
+            cache.lookup(None, Some(&pq(&mislabelled))).await,
+            ApqLookupResult::Unregistered { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn persisted_table_refuses_a_query_that_is_not_its_hash() {
+        let cache = persisted_cache();
+        let hash = ApqCache::compute_hash("query { users { id } }");
+        assert!(matches!(
+            cache
+                .lookup(Some("query { users { id name } }"), Some(&pq(&hash)))
+                .await,
+            ApqLookupResult::Invalid { .. }
+        ));
     }
 
     #[test]
