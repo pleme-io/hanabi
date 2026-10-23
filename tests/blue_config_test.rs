@@ -101,33 +101,6 @@ fn persisted_operations_refuse_a_hash_that_is_not_its_text() {
 }
 
 #[test]
-fn vendored_bidamas_are_the_blue_release_bytes() {
-    use sha2::{Digest, Sha256};
-    let pins = [
-        (
-            "blue/vendor/kousei/kousei.b",
-            "2572ed3a74957ecacf95b09abe39c71b42ecf15e28f53094a393c11f08b7e711",
-        ),
-        (
-            "blue/vendor/kyohi/kyohi.b",
-            "aeb32f55ea0501f549e23fa38edfda026a01d2d79b0f620396866d3d6de31980",
-        ),
-        (
-            "blue/vendor/retsu/retsu.b",
-            "318918ceb512b796e53c02fa6e24eacdc06cdea5eaa7dff158c2aad1bdf3ce69",
-        ),
-        (
-            "blue/vendor/kazu/kazu.b",
-            "80272ca7ccbf36691f306c8aa50dab6c1745331f4d3aaab985ba3d162c78ec28",
-        ),
-    ];
-    for (path, pin) in pins {
-        let got = hex::encode(Sha256::digest(read(path).as_bytes()));
-        assert_eq!(got, pin, "{path} differs from blue v0.0.99");
-    }
-}
-
-#[test]
 fn blue_config_enabled_selects_the_blue_source_and_off_keeps_yaml() {
     let dir = tempfile::tempdir().unwrap();
     let source = std::fs::canonicalize("tests/fixtures/blue/load.b").unwrap();

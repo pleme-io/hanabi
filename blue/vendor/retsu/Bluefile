@@ -1,2 +1,0 @@
-package("retsu", "0.1.0")
-needs("kazu", "^0.1")

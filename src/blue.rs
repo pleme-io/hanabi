@@ -11,44 +11,15 @@ use crate::federation::apq::ApqCache;
 
 pub const PACKAGE: &str = include_str!("../blue/hanabi/hanabi.b");
 
-pub const VENDORED: &[(&str, &str, &str)] = &[
-    ("hanabi", "hanabi/hanabi.b", PACKAGE),
-    (
-        "kousei",
-        "vendor/kousei/kousei.b",
-        include_str!("../blue/vendor/kousei/kousei.b"),
-    ),
-    (
-        "kyohi",
-        "vendor/kyohi/kyohi.b",
-        include_str!("../blue/vendor/kyohi/kyohi.b"),
-    ),
-    (
-        "retsu",
-        "vendor/retsu/retsu.b",
-        include_str!("../blue/vendor/retsu/retsu.b"),
-    ),
-    (
-        "kazu",
-        "vendor/kazu/kazu.b",
-        include_str!("../blue/vendor/kazu/kazu.b"),
-    ),
-];
-
 pub struct HanabiLoader;
 
 impl Loader for HanabiLoader {
     fn load(&self, name: &str) -> Result<Vec<(String, String)>, String> {
-        if name != "hanabi" && Standard.has(name) {
-            return Standard.load(name);
+        if name == "hanabi" {
+            Ok(vec![("hanabi/hanabi.b".to_owned(), PACKAGE.to_owned())])
+        } else {
+            Standard.load(name)
         }
-        VENDORED
-            .iter()
-            .find(|(n, _, _)| *n == name)
-            .map(|(_, label, text)| vec![((*label).to_owned(), (*text).to_owned())])
-            .ok_or_else(|| {
-                format!("cannot load bidama \"{name}\": hanabi carries hanabi, kousei, kyohi, retsu and kazu")
-            })
     }
 }
 

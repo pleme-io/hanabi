@@ -1,2 +1,0 @@
-package("kyohi", "0.1.2")
-needs("retsu", "^0.1")

@@ -1,7 +1,5 @@
 # Hanabi
 
-pending-blue-standard: `blue/vendor/` holds kousei, kyohi, retsu and kazu copied byte for byte from blue v0.0.99, because the crates.io build of `blue-lang-pkg` embeds no bidamas (`Standard` is empty). `HanabiLoader` prefers `Standard` when it carries a package, so the copies retire the day blue publishes its distribution; `vendored_bidamas_are_the_blue_release_bytes` pins them.
-
 > **★★★ CSE / Knowable Construction.** This repo operates under **Constructive Substrate Engineering** — canonical specification at [`pleme-io/theory/CONSTRUCTIVE-SUBSTRATE-ENGINEERING.md`](https://github.com/pleme-io/theory/blob/main/CONSTRUCTIVE-SUBSTRATE-ENGINEERING.md). The Compounding Directive (operational rules: solve once, load-bearing fixes only, idiom-first, models stay current, direction beats velocity) is in the org-level pleme-io/CLAUDE.md ★★★ section. Read both before non-trivial changes.
 
 GraphQL Federation BFF (Backend-for-Frontend) platform service built in Rust with Axum. Hanabi sits between frontend applications and backend microservices, providing a unified GraphQL endpoint with built-in federation query planning, OAuth authentication, session management, rate limiting, WebSocket subscriptions, webhook processing, and static file serving. A single Hanabi deployment can serve multiple products via `X-Product` header routing.
