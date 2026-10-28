@@ -255,18 +255,15 @@ end
 
 def settle(declaration)
   j = judge(schema, declaration)
-  misnamed = filter(
-    (e) -> name_of(e) != section_name(kind_of(e)),
-    get(j, :accepted)
-  )
-  standing = filter((e) -> not member?(e, misnamed), get(j, :accepted))
+  misnamed = filter((e) -> name_of(e) != section_name(kind_of(e)), j[:accepted])
+  standing = filter((e) -> not member?(e, misnamed), j[:accepted])
   tree = reduce(
     (acc, e) -> put_at(acc, get(placement, kind_of(e)), value_of(e)),
     {},
     standing
   )
   refusals = append(
-    get(j, :refusals),
+    j[:refusals],
     map(
       (e) -> refuse(:invalid, e, "a section is named after its kind"),
       misnamed
@@ -274,8 +271,8 @@ def settle(declaration)
   )
   {
     config: tree,
-    off: map(section_name, map(kind_of, get(j, :off))),
-    refusals: map((r) -> {fault: nth(0, r), why: nth(1, r)}, refusals)
+    off: map(section_name, map(kind_of, j[:off])),
+    refusals: map((r) -> {fault: r[0], why: r[1]}, refusals)
   }
 end
 
@@ -293,15 +290,15 @@ end
 
 def persisted(table)
   pairs = map_entries(table)
-  bad = filter((p) -> operation_fault(nth(0, p), nth(1, p)) != nil, pairs)
+  bad = filter((p) -> operation_fault(p[0], p[1]) != nil, pairs)
   {
     operations: reduce(
-      (acc, p) -> assoc(acc, nth(0, p), nth(1, p)),
+      (acc, p) -> assoc(acc, p[0], p[1]),
       {},
       filter((p) -> not member?(p, bad), pairs)
     ),
     refusals: map(
-      (p) -> {fault: :invalid, why: operation_fault(nth(0, p), nth(1, p))},
+      (p) -> {fault: :invalid, why: operation_fault(p[0], p[1])},
       bad
     )
   }
