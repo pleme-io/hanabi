@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use blue_lang_host::{Entry, Loader, Program, Standard, Value};
+use blue_lang_host::{Embedded, Entry, Program, Value};
 use serde::Deserialize;
 use tracing::{error, info, warn};
 
@@ -11,17 +11,10 @@ use crate::federation::apq::ApqCache;
 
 pub const PACKAGE: &str = include_str!("../blue/hanabi/hanabi.b");
 
-pub struct HanabiLoader;
-
-impl Loader for HanabiLoader {
-    fn load(&self, name: &str) -> Result<Vec<(String, String)>, String> {
-        if name == "hanabi" {
-            Ok(vec![("hanabi/hanabi.b".to_owned(), PACKAGE.to_owned())])
-        } else {
-            Standard.load(name)
-        }
-    }
-}
+pub const HANABI: Embedded<'static> = Embedded {
+    name: "hanabi",
+    files: &[("hanabi/hanabi.b", PACKAGE)],
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum BlueError {
@@ -79,7 +72,7 @@ fn read(path: &Path) -> Result<String, BlueError> {
 fn program(path: Option<&Path>, text: &str) -> Result<Program<()>, BlueError> {
     Ok(Program::load_with(
         Entry { path, text },
-        &HanabiLoader,
+        &HANABI,
         &mut (),
     )?)
 }
