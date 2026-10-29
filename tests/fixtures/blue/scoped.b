@@ -1,4 +1,4 @@
-use("hanabi", [:off, :section, :tune])
+use("hanabi", %i[off section tune])
 use("kousei", [:entry])
 
 def declaration()

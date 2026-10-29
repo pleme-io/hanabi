@@ -56,9 +56,9 @@ def declaration()
       {
         api_domains: [],
         ws_domains: [],
-        additional_connect_src: [
-          "*.example.com",
-          "https://*.s3.us-east-2.amazonaws.com"
+        additional_connect_src: %w[
+          *.example.com
+          https://*.s3.us-east-2.amazonaws.com
         ],
         script_sources: ["https://www.googletagmanager.com"],
         style_sources: ["https://fonts.googleapis.com"],

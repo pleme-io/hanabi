@@ -1,26 +1,26 @@
 use(
   "kousei",
-  [
-    :entry,
-    :field,
-    :flag,
-    :int_in,
-    :judge,
-    :kind_of,
-    :list_of,
-    :name_of,
-    :one_of,
-    :overlay,
-    :record_whys,
-    :refuse,
-    :required,
-    :text,
-    :value_of,
-    :verdict
+  %i[
+    entry
+    field
+    flag
+    int_in
+    judge
+    kind_of
+    list_of
+    name_of
+    one_of
+    overlay
+    record_whys
+    refuse
+    required
+    text
+    value_of
+    verdict
   ]
 )
 
-use("retsu", [:first, :is_empty, :rest])
+use("retsu", %i[first is_empty rest])
 
 # hanabi's configuration as kousei entries: one entry per section, each checked, configured off, tuned or refused alone.
 
@@ -82,29 +82,29 @@ def schema()
       field(:preload, flag)
     ],
     headers: [
-      field(:x_frame_options, one_of(["DENY", "SAMEORIGIN"])),
+      field(:x_frame_options, one_of(%w[DENY SAMEORIGIN])),
       field(:referrer_policy, text),
       field(:permissions_policy, text),
       field(
         :cross_origin_opener_policy,
-        one_of(["unsafe-none", "same-origin-allow-popups", "same-origin"])
+        one_of(%w[unsafe-none same-origin-allow-popups same-origin])
       ),
       field(
         :cross_origin_embedder_policy,
-        one_of(["unsafe-none", "credentialless", "require-corp"])
+        one_of(%w[unsafe-none credentialless require-corp])
       ),
       field(
         :cross_origin_resource_policy,
-        one_of(["same-site", "same-origin", "cross-origin"])
+        one_of(%w[same-site same-origin cross-origin])
       )
     ],
     transport: [
-      field(:require_https, one_of(["off", "redirect-forwarded-http"])),
+      field(:require_https, one_of(%w[off redirect-forwarded-http])),
       field(:trust_forwarded_headers, flag)
     ],
     api: [field(:graphql_url, text), field(:ws_url, text)],
     bff: [
-      field(:mode, one_of(["disabled", "proxy", "cache", "aggregate"])),
+      field(:mode, one_of(%w[disabled proxy cache aggregate])),
       field(:product, text),
       field(:hive_router_url, text),
       field(:hive_router_ws_url, text),
@@ -159,7 +159,7 @@ def schema()
       field(:max_concurrent_connections, int_in(1, 9_007_199_254_740_991)),
       field(:worker_threads, whole),
       field(:tcp_nodelay, flag),
-      field(:role, one_of(["standalone", "sidecar"])),
+      field(:role, one_of(%w[standalone sidecar])),
       field(:no_static, flag)
     ],
     compression: [
@@ -185,8 +185,8 @@ def schema()
       field(:prefix, text)
     ],
     logging: [
-      field(:format, one_of(["json", "pretty"])),
-      field(:level, one_of(["trace", "debug", "info", "warn", "error"])),
+      field(:format, one_of(%w[json pretty])),
+      field(:level, one_of(%w[trace debug info warn error])),
       field(:include_location, flag),
       field(:include_thread_ids, flag),
       field(:include_timestamps, flag),
@@ -204,15 +204,15 @@ end
 def placement()
   {
     environment: [],
-    csp: [:security, :csp],
-    cors: [:security, :cors],
-    hsts: [:security, :hsts],
-    headers: [:security, :headers],
-    transport: [:security, :transport],
+    csp: %i[security csp],
+    cors: %i[security cors],
+    hsts: %i[security hsts],
+    headers: %i[security headers],
+    transport: %i[security transport],
     api: [:api],
     bff: [:bff],
-    bff_cache: [:bff, :cache],
-    federation: [:bff, :federation],
+    bff_cache: %i[bff cache],
+    federation: %i[bff federation],
     server: [:server],
     compression: [:compression],
     cache: [:cache],

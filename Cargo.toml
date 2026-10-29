@@ -203,7 +203,7 @@ hyper = "1.0"
 # explicit rather than pulling new code into the closure. Writing the adapter by
 # hand would be reimplementing TokioIo's pin plumbing for no gain.
 hyper-util = { version = "0.1", features = ["tokio"] }
-blue-lang-host = "0.0.125"
+blue-lang-host = "0.0.126"
 
 # jemalloc allocator for 5x faster multi-threaded allocation
 # Optional: enabled via feature flag, configured in Nix build

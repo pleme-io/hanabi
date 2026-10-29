@@ -8,25 +8,25 @@ def declaration()
       {
         api_domains: [],
         ws_domains: [],
-        additional_connect_src: [
-          "https://viacep.com.br",
-          "https://api.stripe.com"
+        additional_connect_src: %w[
+          https://viacep.com.br
+          https://api.stripe.com
         ],
-        script_sources: [
-          "https://js.stripe.com",
-          "https://static.cloudflareinsights.com"
+        script_sources: %w[
+          https://js.stripe.com
+          https://static.cloudflareinsights.com
         ],
         font_sources: ["https://fonts.gstatic.com"],
         style_sources: ["https://fonts.googleapis.com"],
-        frame_sources: ["https://js.stripe.com", "https://hooks.stripe.com"]
+        frame_sources: %w[https://js.stripe.com https://hooks.stripe.com]
       }
     ),
     section(
       :cors,
       {
-        allowed_origins: [
-          "https://staging.example.com",
-          "https://www.staging.example.com"
+        allowed_origins: %w[
+          https://staging.example.com
+          https://www.staging.example.com
         ],
         allow_credentials: true,
         max_age_secs: 3600,
