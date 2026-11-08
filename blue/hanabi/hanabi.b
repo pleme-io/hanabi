@@ -1,3 +1,13 @@
+@moduledoc """
+hanabi's configuration as kousei entries: one entry per section, each
+checked, configured off, tuned or refused alone. A section is named by its
+kind without the colon, and `placement` says where each section sits in
+the rendered configuration.
+
+    section_name(:bff_cache) #=> "bff_cache"
+    placement[:bff_cache] #=> [:bff, :cache]
+"""
+
 use(
   "kousei",
   %i[
@@ -21,8 +31,6 @@ use(
 )
 
 use("retsu", %i[first is_empty rest])
-
-# hanabi's configuration as kousei entries: one entry per section, each checked, configured off, tuned or refused alone.
 
 def whole()
   int_in(0, 9_007_199_254_740_991)
