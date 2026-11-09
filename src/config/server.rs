@@ -43,7 +43,7 @@ pub struct ServerConfig {
 
     /// Server role. Default `Standalone` (the historical mode — full
     /// edge BFF). Set to `Sidecar` when running as the L7 sub-component
-    /// of a pleme-io mesh data plane (Sprint M3 of theory/MESH.md):
+    /// of a pleme-io mesh data plane (mesh Sprint M3):
     /// hanabi binds loopback only, skips static-file serving, expects
     /// the colocated workload at `upstream_loopback`, and reads its
     /// L7 policy block from `policy_source`.
@@ -210,7 +210,7 @@ impl Default for ServerConfig {
 
 /// Server role — `Standalone` (full edge BFF, the historical
 /// behavior) or `Sidecar` (L7 sub-component of a pleme-io mesh data
-/// plane; see theory/MESH.md §V).
+/// plane).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ServerRole {

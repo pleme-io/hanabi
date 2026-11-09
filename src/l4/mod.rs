@@ -35,7 +35,7 @@
 //! of this comment justified the open scalar as "nothing that parsed before stops
 //! parsing", which is the wrong test — it would license a narrowed enum on any
 //! field no operator had used yet. The actual rule
-//! (`theory/UNREPRESENTABILITY.md` §II.2.1) is that a refusal must be scoped to
+//! is that a refusal must be scoped to
 //! the bad state it names: `proxies` is a list of INDEPENDENT entries, so the
 //! document is not the unit of use, and a parse-time rejection would take every
 //! valid proxy beside the bad one down with it — hanabi failing to boot over one

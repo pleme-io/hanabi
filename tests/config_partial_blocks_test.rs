@@ -16,10 +16,9 @@
 //! WARN, once. The fix there was `every_section_accepts_a_partial_block`; this
 //! is the same gate on the service about to inherit the same shape.
 //!
-//! Doctrine: `theory/UNREPRESENTABILITY.md` §II.2.1 — a refusal is scoped to
+//! The rule: a refusal is scoped to
 //! the bad state it names. A config document of independent sections is not the
 //! unit of use, so a document-scoped refusal is mis-scoped by construction.
-//! Ladder rung: `theory/CONFIGURATION-MANAGEMENT.md` §IV rung 3b.
 //!
 //! **The denominator is derived, not listed.** Sections come from the default
 //! config's own serialization, so a section added later is covered without

@@ -242,8 +242,8 @@ fn every_declared_module_is_reached_or_declared_dark() {
         newly_wired.is_empty(),
         "MODULE(S) NO LONGER DARK: {newly_wired:?}\n\
          Good — now remove them from EXPECTED_DARK, and correct every doc that \
-         still calls them unwired: src/lib.rs's `pub mod` block, README.md's \
-         Project Structure table, and theory/VOCABULARY.md's hanabi row."
+         still calls them unwired: src/lib.rs's `pub mod` block and README.md's \
+         Project Structure table."
     );
 }
 
@@ -283,8 +283,7 @@ fn the_binary_and_library_module_sets_are_reported() {
         "`mod l4;` has DISAPPEARED from main.rs. l4 is no longer in the shipped \
          binary, so `l4.enabled = true` would be a config that cannot do \
          anything. Either restore the declaration, or move l4 back to \
-         EXPECTED_DARK and correct src/l4/mod.rs's header, src/lib.rs, README.md \
-         and theory/VOCABULARY.md."
+         EXPECTED_DARK and correct src/l4/mod.rs's header, src/lib.rs and README.md."
     );
     assert!(
         in_binary(&main, "proxy"),
@@ -337,8 +336,8 @@ fn referenced_but_unconstructed_modules_are_declared() {
             !is_constructed(&root, module, ty),
             "`{ty}` IS now constructed outside src/{module}/ -- the module is \
              genuinely wired. Move it to EXPECTED_WIRED and correct \
-             every doc that calls it dark: src/lib.rs's `pub mod` block, \
-             README.md's Project Structure table, and theory/VOCABULARY.md."
+             every doc that calls it dark: src/lib.rs's `pub mod` block and \
+             README.md's Project Structure table."
         );
     }
 }
@@ -373,7 +372,7 @@ fn wired_modules_are_actually_constructed() {
             is_constructed(&root, module, ty),
             "`{ty}` is NO LONGER constructed outside src/{module}/ -- the wiring \
              regressed. Either restore it, or move the entry down a tier and say \
-             so in src/lib.rs, README.md and theory/VOCABULARY.md."
+             so in src/lib.rs and README.md."
         );
     }
 }
@@ -407,8 +406,8 @@ fn call_wired_modules_are_actually_called() {
             "`{call}` is called from NOWHERE outside src/{module}/ -- the module is \
              back to being dark, and `{module}.enabled = true` would be a config \
              that cannot do anything. Restore the call site, or move the entry to \
-             EXPECTED_DARK and correct src/{module}/mod.rs's header, src/lib.rs, \
-             README.md and theory/VOCABULARY.md."
+             EXPECTED_DARK and correct src/{module}/mod.rs's header, src/lib.rs \
+             and README.md."
         );
 
         println!("call-wired {module:<8} <- {} caller(s)", callers.len());
